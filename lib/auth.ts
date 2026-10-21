@@ -27,7 +27,7 @@ export async function createSession(userId: string) {
  * کوکی «secure» فقط وقتی که واقعاً با HTTPS وارد شده‌اند. اگر سایت با http://192.168.x.x (شبکه‌ی خانگی/گوشی)
  * باز شده باشد، مرورگر کوکی secure را دور می‌ریزد و صفحه‌ی بعدی به ورود برمی‌گردد.
  */
-function shouldSecure(h: Headers): boolean {
+export function shouldSecure(h: Headers): boolean {
   if (process.env.NODE_ENV !== 'production' || process.env.INSECURE_COOKIES === '1') return false;
   if (process.env.FORCE_SECURE_COOKIES === '1') return true;
   const fwd = h.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase();

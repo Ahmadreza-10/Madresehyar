@@ -5,7 +5,7 @@ import { addNote } from '@/app/actions/school';
 import { updateNote } from '@/app/actions/edit';
 import { requireSchoolUser } from '@/lib/auth';
 import { isManager, isStaff, focusStudentIds } from '@/lib/permissions';
-import { loadRankContext, resultFor } from '@/lib/ranking';
+import { loadRankContext } from '@/lib/ranking';
 import { classDiscipline, netByStudent, rankNet } from '@/lib/discipline-calc';
 import { disciplineTrend } from '@/lib/trends';
 import { fa, formatJalali, fullName } from '@/lib/format';
@@ -27,7 +27,6 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
   if (!st) return (<><PageHead title="مثبت‌ها و منفی‌ها" illus="discipline" /><Card><Empty text="دانش‌آموزی برای نمایش وجود ندارد." icon="note" /></Card></>);
   const ctx = (await loadRankContext(st.id))!; const d = ctx.data;
   const period = [...ctx.months, ctx.year].find((x) => x.key === sp.p) ?? ctx.year;
-  const res = resultFor(ctx, period);
 
   // امتیاز انضباطی (تشویق +۱ ، منفی −۱) و رتبه‌ی انضباطی فقط در کلاس و پایه
   const net = netByStudent(d.notes, period);
@@ -44,7 +43,6 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
   // نفرات برتر «پایه‌ی» این دانش‌آموز (برای معلم/معاون/مدیر): بر اساس معدل و بر اساس انضباط
   const nm = new Map(d.students.map((s) => [s.id, fullName(s)])); const clsName = new Map(d.classes.map((c) => [c.id, c.name]));
   const clsOf = new Map(d.students.map((s) => [s.id, s.classId]));
-  const topGpa = res.grd.slice(0, 8);
   const topDisc = ctx.gradeIds.map((id) => ({ id, net: net.get(id) ?? 0 })).sort((a, b) => b.net - a.net).map((x, _i, arr) => ({ ...x, rank: 1 + arr.filter((y) => y.net > x.net).length })).slice(0, 8);
 
   const href = (p: string) => { const q = new URLSearchParams(); q.set('student', st.id); if (p !== 'year') q.set('p', p); return `/discipline?${q}`; };
@@ -73,8 +71,7 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
         <TrendChart labels={trend.labels} series={[{ name: fullName(st), color: 'var(--primary)', values: trend.mine }, { name: 'میانگین کلاس (به‌ازای هر نفر)', color: 'var(--warn)', values: trend.classAvg }]} />
       </Card>) },
     ...(staff ? [{ id: 'top', label: '⭐ نفرات برتر', content: (
-      <div className="grid g2">
-        <Card title={`بر اساس معدل — پایه‌ی ${ctx.cls?.gradeLevel ?? ''}`}>{topGpa.length ? <div className="list">{topGpa.map((x) => <div className="list-item" key={x.studentId}><div><b>{nm.get(x.studentId)}</b><div className="muted small">{clsName.get(clsOf.get(x.studentId) ?? '') ?? '—'}</div></div><div className="row" style={{ gap: 6 }}><Badge tone="primary">معدل {fa(x.avg)}</Badge><Badge tone="ok">رتبه {fa(x.rank)}</Badge></div></div>)}</div> : <Empty text="در این بازه نمره‌ای ثبت نشده است." icon="grades" />}</Card>
+      <div>
         <Card title={`بر اساس انضباط — پایه‌ی ${ctx.cls?.gradeLevel ?? ''}`}><div className="list">{topDisc.map((x) => <div className="list-item" key={x.id}><div><b>{nm.get(x.id)}</b><div className="muted small">{clsName.get(clsOf.get(x.id) ?? '') ?? '—'}</div></div><div className="row" style={{ gap: 6 }}><Badge tone="primary">امتیاز {fa(x.net)}</Badge><Badge tone="ok">رتبه {fa(x.rank)}</Badge></div></div>)}</div></Card>
       </div>) }] : []),
   ];
@@ -86,15 +83,7 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
         <PeriodPicker current={period.key} options={options} />
       </PageHead>
 
-      <div className="grid g2">
-        <section className="soft-panel" style={{ '--pc': '#3b82f6' } as React.CSSProperties}>
-          <h3>🎓 رتبه‌ی تحصیلی</h3>
-          <div className="rank-strip">
-            <div><span>رتبه در کلاس</span><b className="num">{of(res.myClass?.rank, res.cls.length)}</b></div>
-            <div><span>رتبه در پایه ({ctx.cls?.gradeLevel ?? '—'})</span><b className="num">{of(res.myGrade?.rank, res.grd.length)}</b></div>
-            <div><span>معدل کل</span><b className="num">{res.myClass ? fa(res.myClass.avg) : '—'}</b></div>
-          </div>
-        </section>
+      <div>
         <section className="soft-panel" style={{ '--pc': '#eab308' } as React.CSSProperties}>
           <h3>⭐ انضباط</h3>
           <div className="rank-strip">

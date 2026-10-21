@@ -7,56 +7,56 @@ import { AuthError, requireActionUser } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { canAccessStudent, schoolOf } from '@/lib/permissions';
 import { getStudyWindow } from '@/lib/settings';
-import { isWithinWindow, overlaps, sessionDuration, studyReportSchema, testPercent, totalMinutes } from '@/lib/study';
-import { minutesNowTehran, parseHM, todayTehran } from '@/lib/time';
+import { isWithinWindow, studyReportSchema, testPercent, totalMinutes } from '@/lib/study';
+import { formatHM, minutesNowTehran, todayTehran } from '@/lib/time';
 import { fail, firstZodError, run, success, type ActionState } from '@/lib/action';
 
 /** payload به‌صورت JSON در فیلد hidden می‌آید تا فرم پویا (چند دسته تست) ساده بماند */
 export async function submitStudyReport(_: ActionState, fd: FormData): Promise<ActionState> {
   try {
-    // فقط ولیِ همان دانش‌آموز؛ مدیر، معاون، معلم و خودِ دانش‌آموز نمی‌توانند ثبت کنند
-    const user = await requireActionUser(['PARENT']);
+    // ولیِ همان دانش‌آموز یا خودِ دانش‌آموز؛ مدیر، معاون و معلم نمی‌توانند ثبت کنند
+    const user = await requireActionUser(['PARENT', 'STUDENT']);
     let raw: unknown;
     try { raw = JSON.parse(String(fd.get('payload') ?? '{}')); } catch { return fail('اطلاعات فرم خوانده نشد.'); }
     const parsed = studyReportSchema.safeParse(raw);
     if (!parsed.success) return fail(firstZodError(parsed.error));
     const input = parsed.data;
 
-    if (!input.studentId) return fail('فرزند را انتخاب کنید.');
-    if (!(await canAccessStudent(user, input.studentId))) return fail('این دانش‌آموز فرزندِ شما نیست.');
-    const studentId = input.studentId; const date = todayTehran();
+    const studentId = user.role === 'STUDENT' ? user.id : input.studentId; const date = todayTehran();
+    if (!studentId) return fail('فرزند را انتخاب کنید.');
+    if (!(await canAccessStudent(user, studentId))) return fail(user.role === 'STUDENT' ? 'گزارش را فقط برای خودت می‌توانی ثبت کنی.' : 'این دانش‌آموز فرزندِ شما نیست.');
     // ویرایش: فقط ولیِ ثبت‌کننده، فقط همان روز (و داخل بازه‌ی مجاز، که پایین‌تر بررسی می‌شود)
     const editId = String(fd.get('editId') ?? '') || null;
+    let editTimes: { startTime: string; endTime: string } | null = null;
     if (editId) {
       const [ex] = await db.select().from(studyReports).where(eq(studyReports.id, editId)).limit(1);
       if (!ex || ex.createdBy !== user.id || ex.date !== date || ex.studentId !== studentId) return fail('این گزارش قابل ویرایش نیست (فقط گزارش‌های امروزِ خودتان).');
+      editTimes = { startTime: ex.startTime, endTime: ex.endTime };
     }
 
     // فقط امروز و فقط داخل بازه‌ی مجاز مدرسه (بررسی سمت سرور؛ با تغییر ساعت گوشی دور زده نمی‌شود)
     const w = await getStudyWindow(schoolOf(user));
     if (!isWithinWindow(w)) return fail(`ثبت گزارش فقط از ساعت ${w.startLabel} تا ${w.endLabel === '24:00' ? '۲۴:۰۰ (نیمه‌شب)' : w.endLabel} مجاز است.`);
 
-    const span = sessionDuration(input.startTime, input.endTime);
-    if (!span) return fail('ساعت پایان باید بعد از ساعت شروع باشد.');
-    if (span > 12 * 60) return fail('بازه‌ی یک گزارش نمی‌تواند بیشتر از ۱۲ ساعت باشد.');
-    if (parseHM(input.endTime)! > minutesNowTehran()) return fail('ساعت پایان نمی‌تواند در آینده باشد.');
     const duration = totalMinutes(input.items);
-    if (duration > span) return fail(`مجموع زمان درس‌ها (${duration} دقیقه) از بازه‌ی شروع تا پایان (${span} دقیقه) بیشتر است.`);
+    if (duration <= 0) return fail('زمان مطالعه یا تست را وارد کنید.');
+    // ساعت شروع و پایان دیگر از کاربر پرسیده نمی‌شود: پایان = همین الان، شروع = پایان منهای مجموع زمان‌ها (ویرایش: ساعت‌های قبلی می‌ماند)
+    const nowM = minutesNowTehran();
+    const times = editTimes ?? { startTime: formatHM(Math.max(0, nowM - duration)), endTime: formatHM(nowM) };
 
     const ids = input.items.map((i) => i.subjectId);
     const okSubjects = await db.select({ id: subjects.id }).from(subjects).where(and(inArray(subjects.id, ids), eq(subjects.schoolId, schoolOf(user))));
     if (okSubjects.length !== ids.length) return fail('یکی از درس‌های انتخاب‌شده معتبر نیست.');
 
-    // همپوشانی با نوبت‌های دیگر همان روز
+    // سقف منطقی برای مجموع مطالعه‌ی یک روز (همه‌ی گزارش‌های آن روز)
     const sameDay = await db.select().from(studyReports).where(and(eq(studyReports.studentId, studentId), eq(studyReports.date, date)));
-    const mine = { s: parseHM(input.startTime)!, e: parseHM(input.endTime)! };
-    if (sameDay.filter((r) => r.id !== editId).some((r) => overlaps(mine, { s: parseHM(r.startTime)!, e: parseHM(r.endTime)! }))) return fail('این بازه با گزارش دیگری در همین روز همپوشانی دارد.');
+    if (sameDay.filter((r) => r.id !== editId).reduce((a, r) => a + r.durationMin, 0) + duration > 16 * 60) return fail('مجموع مطالعه‌ی یک روز نمی‌تواند بیشتر از ۱۶ ساعت باشد.');
 
     // ستون‌های قدیمیِ گزارش از اولین درس پر می‌شوند (سازگاری)؛ جزئیات واقعی در study_report_items است
     const first = input.items[0];
     const values = {
-      studentId, date, startTime: input.startTime, endTime: input.endTime, durationMin: duration, subjectId: first.subjectId,
-      topic: input.items.map((i) => i.topic).join(' • ').slice(0, 200), methods: JSON.stringify(first.methods), pages: input.items.reduce((a, i) => a + i.pages, 0),
+      studentId, date, startTime: times.startTime, endTime: times.endTime, durationMin: duration, subjectId: first.subjectId,
+      topic: input.items.map((i) => i.topic).filter(Boolean).join(' • ').slice(0, 200), methods: JSON.stringify(first.methods), pages: input.items.reduce((a, i) => a + i.pages, 0),
       mastery: Math.min(5, Math.max(1, Math.round(input.items.reduce((a, i) => a + i.mastery, 0) / input.items.length))),
       goal: first.goal || null, goalAchieved: first.goalAchieved ?? null, notes: input.notes || null,
     };
@@ -67,7 +67,7 @@ export async function submitStudyReport(_: ActionState, fd: FormData): Promise<A
       pages: i.pages, mastery: i.mastery, goal: i.goal || null, goalAchieved: i.goalAchieved ?? null, position: pos,
     })));
     const testRows = input.items.flatMap((i) => i.tests.map((t) => ({
-      reportId: report.id, subjectId: i.subjectId, source: t.source, totalCount: t.totalCount, correctCount: t.correctCount, wrongCount: t.wrongCount,
+      reportId: report.id, subjectId: i.subjectId, source: t.source || 'تست', totalCount: t.totalCount, correctCount: t.correctCount, wrongCount: t.wrongCount,
       blankCount: t.blankCount, durationMin: t.durationMin ?? null, note: t.note || null, percent: testPercent(t.correctCount, t.wrongCount, t.totalCount),
     })));
     if (testRows.length) await db.insert(studyTests).values(testRows);
@@ -83,7 +83,7 @@ export async function submitStudyReport(_: ActionState, fd: FormData): Promise<A
 
 /** فقط ولیِ ثبت‌کننده، فقط همان روز و داخل بازه‌ی مجاز می‌تواند گزارش اشتباه را پاک کند */
 export async function deleteStudyReport(fd: FormData) {
-  const user = await requireActionUser(['PARENT']);
+  const user = await requireActionUser(['PARENT', 'STUDENT']);
   const id = String(fd.get('id'));
   const [r] = await db.select().from(studyReports).where(eq(studyReports.id, id)).limit(1);
   if (!r) return;
@@ -110,8 +110,8 @@ export async function saveFeedback(_: ActionState, fd: FormData): Promise<Action
 
 /** ولی: «امروز مطالعه نداشت» (فقط امروز، فقط داخل بازه‌ی مجاز، و فقط اگر برای امروز گزارشی ثبت نشده) */
 export async function declareNoStudy(_: ActionState, fd: FormData): Promise<ActionState> {
-  return run(['PARENT'], async (user) => {
-    const studentId = String(fd.get('studentId') ?? '');
+  return run(['PARENT', 'STUDENT'], async (user) => {
+    const studentId = user.role === 'STUDENT' ? user.id : String(fd.get('studentId') ?? '');
     if (!(await canAccessStudent(user, studentId))) return fail('این دانش‌آموز فرزندِ شما نیست.');
     const w = await getStudyWindow(schoolOf(user)); const date = todayTehran();
     if (!isWithinWindow(w)) return fail(`ثبت فقط از ساعت ${w.startLabel} تا ${w.endLabel === '24:00' ? '۲۴:۰۰ (نیمه‌شب)' : w.endLabel} مجاز است.`);
@@ -123,7 +123,7 @@ export async function declareNoStudy(_: ActionState, fd: FormData): Promise<Acti
   });
 }
 export async function undoNoStudy(fd: FormData) {
-  const user = await requireActionUser(['PARENT']); const studentId = String(fd.get('studentId') ?? '');
+  const user = await requireActionUser(['PARENT', 'STUDENT']); const studentId = user.role === 'STUDENT' ? user.id : String(fd.get('studentId') ?? '');
   const w = await getStudyWindow(schoolOf(user));
   if (!(await canAccessStudent(user, studentId)) || !isWithinWindow(w)) return;
   await db.delete(studySkips).where(and(eq(studySkips.studentId, studentId), eq(studySkips.date, todayTehran())));

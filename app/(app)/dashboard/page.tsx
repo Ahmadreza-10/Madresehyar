@@ -77,7 +77,7 @@ export default async function Dashboard() {
     const avg = scope.length ? await db.select({ s: grades.score, m: grades.maxScore }).from(grades).where(inArray(grades.studentId, scope)) : [];
     const pctAvg = avg.length ? Math.round((avg.reduce((a, g) => a + (g.s / g.m) * 20, 0) / avg.length) * 100) / 100 : null;
     chips = (<>{pctAvg !== null && <span className="hero-chip">🎯 میانگین نمرات {fa(pctAvg)}</span>}<span className="hero-chip">⏱️ مطالعه‌ی امروز {formatDuration(stats.todayMin)}</span><span className="hero-chip">🔥 {fa(stats.streak)} روز پیاپی</span>
-      {u.role === 'PARENT' && <Link href="/study" className="hero-chip">📝 ثبت گزارش مطالعه تا {w.endLabel === '24:00' ? 'نیمه‌شب' : fa(w.endLabel)}</Link>}</>);
+      {(u.role === 'PARENT' || u.role === 'STUDENT') && <Link href="/study" className="hero-chip">📝 ثبت گزارش مطالعه تا {w.endLabel === '24:00' ? 'نیمه‌شب' : fa(w.endLabel)}</Link>}</>);
   }
 
   const common: T[] = [{ href: '/grades', illus: 'grades', label: 'نمرات' }, { href: '/report-card', illus: 'report', label: 'کارنامه و رتبه‌ها' }, { href: '/discipline', illus: 'discipline', label: 'مثبت‌ها و منفی‌ها' }, { href: '/attendance', illus: 'attendance', label: 'حضور و غیاب' }, { href: '/schedule', illus: 'schedule', label: 'برنامه‌ی هفتگی' }];
@@ -86,7 +86,7 @@ export default async function Dashboard() {
   const daily: T[] = manager ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی معلمان' }, ...tail]
     : teacher ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی من' }, ...tail]
     : [...common, { href: '/advisor', illus: 'advisor', label: 'مشاور تحصیلی' }, { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, ...tail];
-  const admin: T[] = [{ href: '/admin/users', illus: 'users', label: 'کاربران مدرسه' }, { href: '/admin/classes', illus: 'school', label: 'کلاس‌ها و درس‌ها' }, { href: '/admin/settings', illus: 'settings', label: 'تنظیمات مدرسه' }];
+  const admin: T[] = [{ href: '/admin/users', illus: 'users', label: 'کاربران مدرسه' }, { href: '/admin/classes', illus: 'school', label: 'کلاس‌ها' }, { href: '/admin/settings', illus: 'settings', label: 'تنظیمات مدرسه' }];
 
   const tabs = [
     { id: 'news', label: '📢 اطلاعیه‌ها', content: (<Card>{news.length ? <div className="list">{news.map((a) => <div className="list-item" key={a.id}><div><b>{a.pinned ? '📌 ' : ''}{a.title}</b><div className="muted small">{a.body.slice(0, 120)}{a.body.length > 120 ? '…' : ''}</div></div></div>)}</div> : <Empty text="اطلاعیه‌ای نیست." icon="mega" />}</Card>) },

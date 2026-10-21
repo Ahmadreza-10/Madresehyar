@@ -12,7 +12,8 @@ import ActionForm from '@/components/ActionForm';
 import JalaliDateInput from '@/components/JalaliDateInput';
 import { Badge, Card, Empty, PageHead } from '@/components/ui';
 import { gradeInsights } from '@/components/GradeInsights';
-import { Tabs } from '@/components/Interactive';
+import { Collapse, Tabs } from '@/components/Interactive';
+import { buildPeriods } from '@/lib/trends';
 
 export const metadata = { title: 'نمرات' };
 const tone = (v: number) => (v >= 17 ? 'ok' : v >= 12 ? 'primary' : v >= 10 ? 'warn' : 'danger') as 'ok' | 'primary' | 'warn' | 'danger';
@@ -24,22 +25,54 @@ export default async function GradesPage({ searchParams }: { searchParams: Promi
     const ids = await focusStudentIds(u);
     const kids = ids.length ? await db.select().from(users).where(inArray(users.id, ids)) : [];
     const kid = kids.find((k) => k.id === sp.student) ?? kids[0];
-    const pk = sp.p ?? 'year';
-    const rows = ids.length ? await db.select({ g: grades, subject: subjects.name, fn: users.firstName, ln: users.lastName }).from(grades).innerJoin(subjects, eq(subjects.id, grades.subjectId)).innerJoin(users, eq(users.id, grades.studentId)).where(inArray(grades.studentId, ids)).orderBy(desc(grades.date)) : [];
+    const rows = kid ? await db.select({ g: grades, subject: subjects.name }).from(grades).innerJoin(subjects, eq(subjects.id, grades.subjectId)).where(eq(grades.studentId, kid.id)).orderBy(desc(grades.date), desc(grades.createdAt)) : [];
+
+    // بازه‌ی پیش‌فرض: ماه جاری (اگر نمره دارد)، وگرنه آخرین ماهی که نمره دارد
+    const kidClass = kid?.classId ? await db.query.classes.findFirst({ where: (c, { eq: e }) => e(c.id, kid.classId!) }) : null;
+    const ps = buildPeriods(kidClass?.academicYear, today);
+    const started = ps.months.filter((m) => m.from <= today);
+    const hasGrades = (m: { from: string; to: string }) => rows.some((r) => r.g.date >= m.from && r.g.date <= m.to);
+    const cur = started[started.length - 1];
+    const defKey = cur && hasGrades(cur) ? cur.key : ([...started].reverse().find(hasGrades)?.key ?? 'year');
+    const pk = sp.p ?? defKey;
+    const period = [...ps.months, ps.year].find((x) => x.key === pk) ?? ps.year;
+
+    // بخش اصلی: فقط آخرین نمره‌ی هر درس در بازه‌ی انتخاب‌شده (ردیف‌ها از جدیدترین به قدیمی‌ترین‌اند)
+    const inPeriod = rows.filter((r) => r.g.date >= period.from && r.g.date <= period.to);
+    const latest = new Map<string, (typeof rows)[number]>(); const countBy = new Map<string, number>();
+    for (const r of inPeriod) { if (!latest.has(r.subject)) latest.set(r.subject, r); countBy.set(r.subject, (countBy.get(r.subject) ?? 0) + 1); }
+    const main = !latest.size
+      ? <Card><Empty text={`در ${period.label} هنوز نمره‌ای ثبت نشده است. از دکمه‌ی «بازه‌ی نمایش» بالای صفحه ماه دیگری را انتخاب کنید.`} icon="grades" /></Card>
+      : <Card title={`آخرین نمره‌ی هر درس — ${period.label}`}><div className="list">{[...latest.values()].map((r) => (
+          <div className="list-item" key={r.subject}>
+            <div><b>{r.subject}</b><div className="muted small">{r.g.title} • {gradeTypeLabels[r.g.type]} • {formatJalaliShort(r.g.date)}{(countBy.get(r.subject) ?? 0) > 1 && ` • ${fa((countBy.get(r.subject) ?? 1) - 1)} نمره‌ی دیگر در همین بازه (در بخش «نمرات هر درس»)`}</div></div>
+            <Badge tone={tone((r.g.score / r.g.maxScore) * 20)}>{fa(r.g.score)} از {fa(r.g.maxScore)}</Badge>
+          </div>))}</div></Card>;
+
+    // بخش جدا: هر درس یک تب بازوبسته‌شونده با همه‌ی نمره‌هایش
     const bySubject = new Map<string, typeof rows>(); for (const r of rows) bySubject.set(r.subject, [...(bySubject.get(r.subject) ?? []), r]);
+    const perSubject = !rows.length
+      ? <Card><Empty text="هنوز نمره‌ای ثبت نشده است." icon="grades" /></Card>
+      : <div className="stack"><p className="muted small" style={{ margin: 0 }}>روی نام هر درس بزنید تا همه‌ی نمره‌هایش باز شود.</p>{[...bySubject.entries()].map(([name, list]) => {
+          const avg = list.reduce((a, r) => a + (r.g.score / r.g.maxScore) * 20, 0) / list.length;
+          return (
+            <Collapse key={name} title={name} hint={`${fa(list.length)} نمره`} badge={<Badge tone={tone(avg)}>میانگین {fa(Math.round(avg * 100) / 100)}</Badge>}>
+              <div className="list">{list.map((r) => (
+                <div className="list-item" key={r.g.id}><div><b>{r.g.title}</b><div className="muted small">{gradeTypeLabels[r.g.type]} • {formatJalaliShort(r.g.date)}</div></div><Badge tone={tone((r.g.score / r.g.maxScore) * 20)}>{fa(r.g.score)} از {fa(r.g.maxScore)}</Badge></div>))}</div>
+            </Collapse>);
+        })}</div>;
+
     const ins = kid?.classId ? await gradeInsights({ schoolId: u.schoolId!, classId: kid.classId, studentId: kid.id, periodKey: pk, hrefFor: (p) => `/grades?student=${kid.id}&p=${p}` }) : null;
-    const cards = (<>{!rows.length ? <Card><Empty text="هنوز نمره‌ای ثبت نشده است." icon="grades" /></Card> : <div className="grid g2">{[...bySubject.entries()].map(([name, list]) => {
-        const avg = list.reduce((a, r) => a + (r.g.score / r.g.maxScore) * 20, 0) / list.length;
-        return (<Card key={name} title={name} action={<Badge tone={tone(avg)}>میانگین {fa(Math.round(avg * 100) / 100)}</Badge>}><div className="list">{list.map((r) => (
-          <div className="list-item" key={r.g.id}><div><b>{r.g.title}</b><div className="muted small">{gradeTypeLabels[r.g.type]} • {formatJalaliShort(r.g.date)}{u.role === 'PARENT' && ` • ${r.fn} ${r.ln}`}</div></div><Badge tone={tone((r.g.score / r.g.maxScore) * 20)}>{fa(r.g.score)} از {fa(r.g.maxScore)}</Badge></div>))}</div></Card>);
-      })}</div>}</>);
     return (<><PageHead title={u.role === 'PARENT' ? 'نمرات فرزندان' : 'نمرات من'} sub="نمره‌ها بر مبنای ۲۰ نمایش داده می‌شوند." illus="grades">
         {kids.length > 1 && <form className="row" action="/grades"><select name="student" defaultValue={kid?.id} style={{ width: 220 }}>{kids.map((k) => <option key={k.id} value={k.id}>{fullName(k)}</option>)}</select><button className="btn ghost sm">نمایش</button></form>}
         {ins?.picker}
       </PageHead>
-      {ins ? <Tabs tabs={[{ id: 'grades', label: '📒 نمرات درس‌ها', content: cards }, { id: 'best', label: '🏆 بهترین کلاس پایه', content: ins.ranking }, { id: 'trend', label: '📈 روند معدل', content: ins.trend }]} /> : cards}</>);
+      <Tabs tabs={[
+        { id: 'latest', label: '📒 آخرین نمره‌ها', content: main },
+        { id: 'subjects', label: '📚 نمرات هر درس', content: perSubject },
+        ...(ins ? [{ id: 'best', label: '🏆 بهترین کلاس پایه', content: ins.ranking }, { id: 'trend', label: '📈 روند معدل', content: ins.trend }] : []),
+      ]} /></>);
   }
-
   const cls = await classesFor(u);
   const classId = sp.class && cls.some((c) => c.id === sp.class) ? sp.class : cls[0]?.id;
   const subs = classId ? await subjectsFor(u, classId) : [];

@@ -8,4 +8,3 @@ data/*.db-*
 *.tsbuildinfo
 .env.local
 .env.*.local
-

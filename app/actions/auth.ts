@@ -7,9 +7,11 @@ import { db } from '@/db';
 import { schools, users } from '@/db/schema';
 import { createSession, destroySession, getCurrentUser } from '@/lib/auth';
 import { audit } from '@/lib/audit';
+import { checkPassword } from '@/lib/password-policy';
 import { isExpired } from '@/lib/subscription';
 import { checkLogin, recordFailure, recordSuccess } from '@/lib/rate-limit';
 import { fail, success, type ActionState } from '@/lib/action';
+import { findApplication, startApplicantSession } from '@/lib/applicant';
 
 export async function loginAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const username = String(fd.get('username') ?? '').trim().toLowerCase();
@@ -30,7 +32,13 @@ export async function loginAction(_: ActionState, fd: FormData): Promise<ActionS
   }
   // مقایسه‌ی رمز حتی برای کاربر ناموجود انجام می‌شود تا زمان پاسخ چیزی لو ندهد
   const ok = await bcrypt.compare(password, user?.passwordHash ?? '$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
-  if (!user || !ok) { recordFailure(key); return fail('نام کاربری یا رمز عبور اشتباه است.'); }
+  if (!user || !ok) {
+    // خریداری که هنوز مدیر نشده: نام کاربری = شماره‌ی موبایل، رمز = کد پیگیری → صفحه‌ی وضعیت درخواست
+    const app = await findApplication(username, password);
+    if (app && app.status !== 'registered') { recordSuccess(key); await startApplicantSession(app.id); redirect('/register/status'); }
+    if (app) return fail('ثبت‌نام این درخواست کامل شده است؛ با نام کاربری و رمزی که ساخته‌اید وارد شوید.');
+    recordFailure(key); return fail('نام کاربری یا رمز عبور اشتباه است.');
+  }
   if (user.status !== 'active') return fail('دسترسی این حساب توسط مدیر غیرفعال شده است.');
   if (user.schoolId) { const [sc] = await db.select({ st: schools.status, ends: schools.subscriptionEndsAt }).from(schools).where(eq(schools.id, user.schoolId)).limit(1); if (!sc || sc.st !== 'active') return fail('دسترسی این مدرسه به سامانه غیرفعال شده است.'); if (isExpired(sc.ends)) return fail('اشتراک این مدرسه تمام شده است. مدیر مدرسه باید آن را تمدید کند (با پشتیبانی تماس بگیرید).'); }
 
@@ -53,7 +61,8 @@ export async function changePasswordAction(_: ActionState, fd: FormData): Promis
   if (!u) return fail('نشست شما منقضی شده است.');
   const current = String(fd.get('current') ?? ''); const next = String(fd.get('next') ?? ''); const again = String(fd.get('again') ?? '');
   if (!(await bcrypt.compare(current, u.passwordHash))) return fail('رمز فعلی درست نیست.');
-  if (next.length < 8) return fail('رمز جدید باید حداقل ۸ نویسه باشد.');
+  { const bad = checkPassword(next, { username: u.username, phone: u.phone }); if (bad) return fail(bad); }
+  if (next === current) return fail('رمز جدید باید با رمز فعلی فرق داشته باشد.');
   if (next !== again) return fail('تکرار رمز جدید یکسان نیست.');
   await db.update(users).set({ passwordHash: await bcrypt.hash(next, 10), mustChangePassword: false }).where(eq(users.id, u.id));
   await audit(u.id, 'PASSWORD_CHANGE', 'user', u.id);

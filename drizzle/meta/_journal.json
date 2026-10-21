@@ -78,6 +78,20 @@
       "when": 1792400000000,
       "tag": "0010_request_details",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792500000000,
+      "tag": "0011_payment_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792600000000,
+      "tag": "0012_password_resets",
+      "breakpoints": true
     }
   ]
 }

@@ -1,49 +1,84 @@
 import Link from 'next/link';
-import { completeRegistration } from '@/app/actions/register';
+import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
+import { db } from '@/db';
+import { plans } from '@/db/schema';
+import { applicantLogout, completeRegistration, submitPayment, updateApplication } from '@/app/actions/register';
 import ActionForm from '@/components/ActionForm';
 import { LogoMark } from '@/components/Illus';
-import { lookupRequest } from '@/lib/purchase';
-import { formatJalali, toman, fa } from '@/lib/format';
+import { getApplication } from '@/lib/applicant';
+import { fa, formatJalali, toman } from '@/lib/format';
 import { Badge } from '@/components/ui';
+import ApplicationFields from '@/components/ApplicationFields';
+import { PASSWORD_HINT } from '@/lib/password-policy';
 
-export const metadata = { title: 'پیگیری درخواست' };
+export const metadata = { title: 'وضعیت درخواست من' };
 export const dynamic = 'force-dynamic';
-const LABEL = { pending: 'در انتظار بررسی', approved: 'تأیید شد', rejected: 'رد شد', registered: 'ثبت‌نام کامل شد' } as const;
-const TONE = { pending: 'warn', approved: 'ok', rejected: 'danger', registered: 'primary' } as const;
 
-export default async function StatusPage({ searchParams }: { searchParams: Promise<{ code?: string; phone?: string }> }) {
-  const sp = await searchParams; const asked = !!(sp.code && sp.phone);
-  const res = asked ? await lookupRequest(sp.code!, sp.phone!) : null;
-  const r = res && 'r' in res ? res.r : null;
+const STEPS = ['درخواست', 'تأیید ادمین', 'پرداخت', 'تأیید پرداخت', 'ساخت حساب مدیر'];
+const STEP_OF = { pending: 1, approved: 2, payment_review: 3, paid: 4, registered: 5, rejected: 1 } as const;
+const LABEL = { pending: 'در انتظار بررسی', approved: 'تأیید شد؛ منتظر پرداخت', payment_review: 'پرداخت در حال بررسی', paid: 'پرداخت تأیید شد', rejected: 'رد شد', registered: 'ثبت‌نام کامل شد' } as const;
+const TONE = { pending: 'warn', approved: 'ok', payment_review: 'warn', paid: 'ok', rejected: 'danger', registered: 'primary' } as const;
+
+export default async function StatusPage() {
+  const r = await getApplication();
+  if (!r) redirect('/login');
+  const [plan] = r.planId ? await db.select().from(plans).where(eq(plans.id, r.planId)).limit(1) : [];
+  const at = STEP_OF[r.status];
   return (
     <main className="reg-page narrow">
-      <header className="reg-head"><LogoMark size={44} /><div><b>مدرسه‌یار</b><span>پیگیری درخواست</span></div><Link href="/register" className="btn ghost sm">تعرفه‌ها</Link></header>
+      <header className="reg-head"><LogoMark size={44} /><div><b>مدرسه‌یار</b><span>وضعیت درخواست من</span></div>
+        <form action={applicantLogout}><button className="btn ghost sm">خروج</button></form></header>
+      <ol className="reg-steps">{STEPS.map((t, i) => <li key={t} className={r.status !== 'rejected' && i + 1 < at ? 'done' : i + 1 === at ? (r.status === 'rejected' ? 'bad' : 'on') : ''}>{fa(i + 1)}. {t}</li>)}</ol>
       <section className="card">
-        <form className="form" action="/register/status" method="get">
-          <div className="field"><label>کد پیگیری</label><input name="code" defaultValue={sp.code ?? ''} dir="ltr" required autoCapitalize="characters" placeholder="مثلاً K7M2QX9TBA" /></div>
-          <div className="field"><label>شماره‌ی موبایل مدیر</label><input name="phone" defaultValue={sp.phone ?? ''} dir="ltr" inputMode="tel" required placeholder="09123456789" /></div>
-          <button className="btn">نمایش وضعیت</button>
-        </form>
+        <div className="row between"><h3>{r.schoolName}</h3><Badge tone={TONE[r.status]}>{LABEL[r.status]}</Badge></div>
+        <div className="muted small" style={{ margin: '6px 0 10px' }}>{r.managerName} • ثبت‌شده در {formatJalali(r.createdAt.toISOString().slice(0, 10))}{plan ? ` • تعرفه‌ی ${plan.name}` : ''} • کد: <span dir="ltr">{r.trackingCode}</span></div>
+        <div className="plan-price" style={{ fontSize: '1.2rem' }}>{toman(r.priceToman)}</div>
+
+        {r.status === 'pending' && <p className="muted" style={{ marginTop: 12 }}>درخواست شما در صف بررسی ادمین است. هر زمان بخواهید با همان شماره‌ی موبایل و کد پیگیری دوباره وارد شوید و وضعیت را ببینید.</p>}
+
+        {r.status === 'rejected' && <div style={{ marginTop: 12 }}><div className="alert error">درخواست شما پذیرفته نشد.{r.adminNote ? ` پیام ادمین: ${r.adminNote}` : ''}</div><p className="small" style={{ marginTop: 10 }}>می‌توانید با اصلاحات، <Link href="/register">درخواست تازه‌ای</Link> ثبت کنید.</p></div>}
+
+        {r.status === 'approved' && (
+          <div style={{ marginTop: 14 }}>
+            <div className="feedback"><b>درخواست شما تأیید شد.</b> مبلغ بالا را طبق راهنمای زیر پرداخت کنید و سپس رسید را ثبت کنید.</div>
+            <div className="pay-box"><b>راهنمای پرداخت</b><p>{r.adminNote ? r.adminNote : 'ادمین به‌زودی راهنمای پرداخت (شماره‌ی کارت/حساب) را اعلام می‌کند؛ اگر پیامی نمی‌بینید با پشتیبانی تماس بگیرید.'}</p></div>
+            <h3 style={{ margin: '14px 0 8px' }}>ثبت رسید پرداخت</h3>
+            <ActionForm action={submitPayment} submit="ثبت رسید و ارسال برای بررسی" resetOnSuccess={false}>
+              <div className="field"><label>شماره‌ی پیگیری پرداخت <span className="muted">(یا چهار رقم آخر کارت مبدأ)</span></label><input name="ref" dir="ltr" required minLength={4} maxLength={40} inputMode="numeric" /></div>
+              <div className="field"><label>توضیحات <span className="muted">(اختیاری؛ مثلاً ساعت و تاریخ واریز)</span></label><input name="note" maxLength={300} /></div>
+            </ActionForm>
+          </div>)}
+
+        {r.status === 'payment_review' && (
+          <div style={{ marginTop: 12 }}>
+            <div className="feedback">رسید شما ثبت شد. ادمین پرداخت را بررسی می‌کند؛ پس از تأیید، همین‌جا حساب مدیر خود را می‌سازید.{r.adminNote ? <><br />پیام ادمین: {r.adminNote}</> : null}</div>
+            <details style={{ marginTop: 10 }}><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>ویرایش رسید</summary>
+              <ActionForm action={submitPayment} submit="ذخیره‌ی ویرایش" resetOnSuccess={false}>
+                <div className="field"><label>شماره‌ی پیگیری پرداخت</label><input name="ref" dir="ltr" required minLength={4} maxLength={40} defaultValue={r.payRef ?? ''} /></div>
+                <div className="field"><label>توضیحات</label><input name="note" maxLength={300} defaultValue={r.payNote ?? ''} /></div>
+              </ActionForm></details>
+          </div>)}
+
+        {r.status === 'paid' && (
+          <div style={{ marginTop: 14 }}>
+            <div className="feedback"><b>پرداخت شما تأیید شد.</b> نام کاربری و رمز عبور را انتخاب کنید تا مدرسه‌ی شما ساخته شود و مدیر آن شوید.</div>
+            <ActionForm action={completeRegistration} submit="ساخت مدرسه و حساب مدیر" resetOnSuccess={false}>
+              <div className="field"><label>نام کاربری (انگلیسی)</label><input name="username" dir="ltr" required defaultValue={r.phone} autoCapitalize="none" autoComplete="username" /></div>
+              <p className="hint-t">{PASSWORD_HINT}</p>
+              <div className="inline-fields"><div className="field"><label>رمز عبور</label><input name="password" type="password" dir="ltr" minLength={10} required autoComplete="new-password" /></div>
+                <div className="field"><label>تکرار رمز</label><input name="again" type="password" dir="ltr" minLength={10} required autoComplete="new-password" /></div></div>
+            </ActionForm>
+          </div>)}
+
+        {r.status === 'registered' && <p style={{ marginTop: 12 }}>ثبت‌نام کامل شده است. <Link href="/login">ورود به سامانه</Link></p>}
       </section>
-      {res && 'error' in res && <div className="alert error" style={{ marginTop: 14 }}>{res.error}</div>}
-      {r && (
-        <section className="card" style={{ marginTop: 14 }}>
-          <div className="row between"><h3>{r.schoolName}</h3><Badge tone={TONE[r.status]}>{LABEL[r.status]}</Badge></div>
-          <div className="muted small" style={{ margin: '6px 0 10px' }}>{r.managerName} • ثبت‌شده در {formatJalali(r.createdAt.toISOString().slice(0, 10))}{res && 'planName' in res && res.planName ? ` • تعرفه‌ی ${res.planName}` : ''}</div>
-          <div className="plan-price" style={{ fontSize: '1.2rem' }}>{toman(r.priceToman)}</div>
-          {r.adminNote && <div className="feedback" style={{ marginTop: 10 }}><b>پیام ادمین:</b> {r.adminNote}</div>}
-          {r.status === 'pending' && <p className="muted small" style={{ marginTop: 10 }}>درخواست شما در صف بررسی است. پس از تأیید، همین صفحه فرم تکمیل ثبت‌نام را نشان می‌دهد.</p>}
-          {r.status === 'rejected' && <p className="muted small" style={{ marginTop: 10 }}>متأسفانه درخواست پذیرفته نشد. می‌توانید با اصلاحات، درخواست جدیدی بدهید.</p>}
-          {r.status === 'registered' && <p style={{ marginTop: 10 }}>ثبت‌نام کامل شده است. <Link href="/login">ورود به سامانه</Link></p>}
-          {r.status === 'approved' && r.kind === 'new' && (
-            <div style={{ marginTop: 14 }}><h3 style={{ marginBottom: 8 }}>تکمیل ثبت‌نام</h3><p className="muted small" style={{ marginBottom: 10 }}>درخواست شما تأیید شد. نام کاربری و رمز حساب مدیر مدرسه را تعیین کنید ({fa(r.studentCount)} دانش‌آموز).</p>
-              <ActionForm action={completeRegistration} submit="ساخت مدرسه و حساب مدیر" resetOnSuccess={false}>
-                <input type="hidden" name="code" value={r.trackingCode} /><input type="hidden" name="phone" value={r.phone} />
-                <div className="field"><label>نام کاربری (انگلیسی)</label><input name="username" dir="ltr" required autoCapitalize="none" autoComplete="username" /></div>
-                <div className="inline-fields"><div className="field"><label>رمز عبور</label><input name="password" type="password" dir="ltr" minLength={8} required autoComplete="new-password" /></div>
-                  <div className="field"><label>تکرار رمز</label><input name="again" type="password" dir="ltr" minLength={8} required autoComplete="new-password" /></div></div>
-              </ActionForm></div>)}
-        </section>)}
+      {r.status !== 'registered' && r.status !== 'rejected' && (
+        <details className="card"><summary style={{ cursor: 'pointer', fontWeight: 700 }}>ویرایش اطلاعات درخواست</summary>
+          <ActionForm action={updateApplication} submit="ذخیره‌ی تغییرات" resetOnSuccess={false}>
+            <ApplicationFields v={r} maxStudents={plan?.maxStudents ?? 0} />
+          </ActionForm></details>)}
+      <p className="small" style={{ textAlign: 'center' }}>مدیر دسترسی به سامانه فقط پس از تأیید پرداخت فعال می‌شود. <Link href="/features">دیدن امکانات سامانه</Link></p>
     </main>
   );
 }

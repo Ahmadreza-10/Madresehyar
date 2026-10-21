@@ -13,8 +13,8 @@ export default async function DonePage({ searchParams }: { searchParams: Promise
         <h2>درخواست شما ثبت شد</h2>
         <p className="muted">کد پیگیری خود را یادداشت کنید:</p>
         <div className="track-code" dir="ltr">{code ?? '—'}</div>
-        <p className="small">پس از بررسی و تأیید ادمین، با همین کد و شماره‌ی موبایل مدیر می‌توانید ثبت‌نام را کامل کنید.</p>
-        <div className="row" style={{ justifyContent: 'center' }}><Link className="btn" href={`/register/status${code ? `?code=${encodeURIComponent(code)}` : ''}`}>پیگیری وضعیت</Link><Link className="btn ghost" href="/login">ورود</Link></div>
+        <p className="small">برای پیگیری، در <b>صفحه‌ی ورود</b> «شماره‌ی موبایل» را به‌عنوان نام کاربری و «این کد» را به‌جای رمز عبور بنویسید. بعد از تأیید ادمین پرداخت می‌کنید، و پس از تأیید پرداخت، مدیر مدرسه می‌شوید.</p>
+        <div className="row" style={{ justifyContent: 'center' }}><Link className="btn" href="/login">رفتن به صفحه‌ی ورود</Link><Link className="btn ghost" href="/features">امکانات سامانه</Link></div>
       </section>
     </main>
   );

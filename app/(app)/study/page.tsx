@@ -26,6 +26,7 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   const user = await requireSchoolUser(); const sp = await searchParams;
   if (user.role === 'TEACHER') return <TeacherStudyView teacherId={user.id} schoolId={user.schoolId!} dateParam={sp.d} />;
   const today = todayTehran(); const staff = isStaff(user.role);
+  const canWrite = user.role === 'PARENT' || user.role === 'STUDENT'; const isSelf = user.role === 'STUDENT';
   const range = sp.range === '7' || sp.range === 'all' ? sp.range : '30';
   const from = range === 'all' ? undefined : addDays(today, -(range === '7' ? 6 : 29));
 
@@ -41,18 +42,17 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   const stats = summarize(flattenItems(reports), today);
 
   // درس‌های قابل انتخاب در فرمِ ولی: درس‌های همین مدرسه
-  const subjectOpts = user.role === 'PARENT' ? await db.select({ id: subjects.id, name: subjects.name }).from(subjects).where(eq(subjects.schoolId, user.schoolId!)).orderBy(asc(subjects.name)) : [];
+  const subjectOpts = canWrite ? await db.select({ id: subjects.id, name: subjects.name }).from(subjects).where(eq(subjects.schoolId, user.schoolId!)).orderBy(asc(subjects.name)) : [];
 
   const w = await getStudyWindow(user.schoolId!);
   // ویرایش گزارش امروزِ خودِ ولی
-  const er = user.role === 'PARENT' && sp.edit ? reports.find((r) => r.id === sp.edit && r.createdBy === user.id && r.date === today) : undefined;
+  const er = canWrite && sp.edit ? reports.find((r) => r.id === sp.edit && r.createdBy === user.id && r.date === today) : undefined;
   const initial = er ? { id: er.id, studentId: er.studentId, startTime: er.startTime, endTime: er.endTime, notes: er.notes ?? '', items: er.items.map((i) => ({ subjectId: i.subjectId, studyMin: i.studyMin, topic: i.topic, methods: i.methodList, pages: i.pages, mastery: i.mastery, goal: i.goal ?? '', goalAchieved: i.goalAchieved ?? null, tests: i.tests.map((t) => ({ source: t.source, totalCount: t.totalCount, correctCount: t.correctCount, wrongCount: t.wrongCount, blankCount: t.blankCount, durationMin: t.durationMin, note: t.note ?? '' })) })) } : undefined;
   const byDay = new Map<string, typeof reports>(); for (const r of reports) byDay.set(r.date, [...(byDay.get(r.date) ?? []), r]);
   const q = (o: Record<string, string | undefined>) => { const p = new URLSearchParams(); for (const [k, v] of Object.entries({ student: chosen, range, class: chosenClass?.id, ...o })) if (v) p.set(k, v); return `/study?${p}`; };
   // نقشه‌ی فعالیت: برای یک دانش‌آموز = مطالعه‌ی خودش؛ برای کلاس/مدرسه = «میانگین هر دانش‌آموز» (تا تعداد دانش‌آموزان نقشه را بی‌معنی پررنگ نکند)
   const heatDiv = chosen ? 1 : Math.max(1, scope.length);
   const heatTitle = chosen ? `نقشه‌ی فعالیت ۳۰ روز اخیر — ${students.find((x) => x.id === chosen)?.name}` : chosenClass ? `نقشه‌ی فعالیت ۳۰ روز اخیر — میانگین هر دانش‌آموزِ ${chosenClass.name}` : staff ? 'نقشه‌ی فعالیت ۳۰ روز اخیر — میانگین هر دانش‌آموزِ مدرسه' : 'نقشه‌ی فعالیت ۳۰ روز اخیر';
-  const canWrite = user.role === 'PARENT';
 
   // «عدم مطالعه»های ثبت‌شده توسط ولی (۳۱ روز اخیر)
   const skipRows = scope.length ? await db.select().from(studySkips).where(and(inArray(studySkips.studentId, scope), gte(studySkips.date, addDays(today, -31)))) : [];
@@ -60,8 +60,8 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   const todayReported = new Set(reports.filter((r) => r.date === today).map((r) => r.studentId));
   const todaySkip = new Set(skipRows.filter((k) => k.date === today).map((k) => k.studentId));
   const noStudyCard = canWrite && students.length ? (
-    <Card title="امروز مطالعه نداشت؟" className="">
-      <p className="muted small" style={{ marginBottom: 10 }}>اگر فرزندتان امروز اصلاً مطالعه نکرده، «عدم مطالعه» را ثبت کنید تا برای مدرسه مشخص باشد و یادآور هم نیاید. اگر بعداً مطالعه کرد، کافی است گزارش ثبت کنید؛ «عدم مطالعه» خودکار لغو می‌شود.</p>
+    <Card title={isSelf ? 'امروز مطالعه نداشتی؟' : 'امروز مطالعه نداشت؟'} className="">
+      <p className="muted small" style={{ marginBottom: 10 }}>{isSelf ? 'اگر امروز اصلاً مطالعه نکرده‌ای، «عدم مطالعه» را ثبت کن تا برای مدرسه مشخص باشد. اگر بعداً مطالعه کردی، کافی است گزارش ثبت کنی؛ «عدم مطالعه» خودکار لغو می‌شود.' : 'اگر فرزندتان امروز اصلاً مطالعه نکرده، «عدم مطالعه» را ثبت کنید تا برای مدرسه مشخص باشد و یادآور هم نیاید. اگر بعداً مطالعه کرد، کافی است گزارش ثبت کنید؛ «عدم مطالعه» خودکار لغو می‌شود.'}</p>
       <div className="list">{students.map((s) => (
         <div className="list-item" key={s.id} style={{ flexWrap: 'wrap' }}><b>{s.name}</b>
           {todayReported.has(s.id) ? <Badge tone="ok">امروز گزارش دارد ✓</Badge>
@@ -131,13 +131,13 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
       {reports.length === 0 ? <Card><Empty text="در این بازه گزارشی ثبت نشده است." icon="study" /></Card> : [...byDay.entries()].map(([date, list]) => (
         <section key={date}>
           <div className="day-head"><span style={{ color: 'var(--text)', fontWeight: 700 }}>{formatJalali(date, true)}</span><span className="num">{formatDuration(list.reduce((a, r) => a + r.durationMin, 0))}</span></div>
-          {list.map((r) => <ReportCard key={r.id} r={r} showStudent={user.role !== 'STUDENT'} canFeedback={isManager(user.role)} canDelete={user.role === 'PARENT' && r.createdBy === user.id && r.date === today} />)}
+          {list.map((r) => <ReportCard key={r.id} r={r} showStudent={user.role !== 'STUDENT'} canFeedback={isManager(user.role)} canDelete={canWrite && r.createdBy === user.id && r.date === today} />)}
         </section>
       ))}
 </>);
   return (
     <>
-      <PageHead illus="study" title="گزارش مطالعه" sub={user.role === 'STUDENT' ? 'گزارش مطالعه‌ی تو را ولی‌ات ثبت می‌کند؛ اینجا پیشرفتت را ببین.' : user.role === 'PARENT' ? 'گزارش مطالعه‌ی روزانه‌ی فرزندتان را اینجا ثبت کنید.' : 'پیگیری مطالعه‌ی دانش‌آموزان (فقط مشاهده و بازخورد)'} />
+      <PageHead illus="study" title="گزارش مطالعه" sub={user.role === 'STUDENT' ? 'کتاب‌هایی که امروز خواندی و تست‌هایی که زدی را اینجا ثبت کن و پیشرفتت را ببین.' : user.role === 'PARENT' ? 'گزارش مطالعه‌ی روزانه‌ی فرزندتان را اینجا ثبت کنید.' : 'پیگیری مطالعه‌ی دانش‌آموزان (فقط مشاهده و بازخورد)'} />
       <div className="grid g4" style={{ marginBottom: 16 }}>
         <Stat label="مطالعه‌ی امروز" value={formatDuration(stats.todayMin)} icon="clock" tone="primary" />
         <Stat label="مطالعه‌ی این هفته" value={formatDuration(stats.weekMin)} hint="از شنبه" icon="study" tone="accent" />
@@ -148,7 +148,7 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
       {filters}
       <Tabs tabs={[
         ...(canWrite ? [{ id: 'form', label: '✏️ ثبت گزارش', content: (<div className="stack"><Card title={initial ? 'ویرایش گزارش امروز' : 'ثبت گزارش جدید'} className="">
-          {students.length ? <StudyForm key={initial?.id ?? 'new'} initial={initial} subjects={subjectOpts} students={students} windowStart={w.startMin} windowEnd={w.endMin} startLabel={w.startLabel} endLabel={w.endLabel} /> : <Empty text="هنوز فرزندی به حساب شما متصل نشده است. از مدیر یا معاون مدرسه بخواهید پیوند را ثبت کند." icon="users" />}
+          {students.length ? <StudyForm key={initial?.id ?? 'new'} initial={initial} self={isSelf} subjects={subjectOpts} students={students} windowStart={w.startMin} windowEnd={w.endMin} startLabel={w.startLabel} endLabel={w.endLabel} /> : <Empty text="هنوز فرزندی به حساب شما متصل نشده است. از مدیر یا معاون مدرسه بخواهید پیوند را ثبت کند." icon="users" />}
         </Card>{noStudyCard}</div>) }] : []),
         { id: 'progress', label: '📈 پیشرفت', content: progressView },
         { id: 'list', label: '📋 گزارش‌ها', content: listView },

@@ -11,14 +11,14 @@ export default function ReportCard({ r, showStudent, canFeedback, canDelete }: {
       <div className="report-top">
         <div>
           <div className="row" style={{ gap: 8 }}><b>{r.items.length > 1 ? `${fa(r.items.length)} درس` : r.items[0]?.subjectName}</b>{r.items.length > 1 && <span className="muted small">{r.items.map((i) => i.subjectName).join('، ')}</span>}</div>
-          <div className="muted small num">{showStudent && <>{r.studentName} • </>}{fa(r.startTime)} تا {fa(r.endTime)}</div>
+          <div className="muted small num">{showStudent && <>{r.studentName} • </>}ثبت در ساعت {fa(r.endTime)}</div>
         </div>
         <div className="row" style={{ gap: 6 }}><Badge tone="primary">{formatDuration(r.durationMin)}</Badge></div>
       </div>
       <div className="study-items">{r.items.map((i) => (
         <div className="study-item" key={i.id}>
           <div className="row between" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <div><b>{i.subjectName}</b> <span className="muted">•</span> <span className="small">{i.topic}</span></div>
+            <div><b>{i.subjectName}</b> {i.topic && <><span className="muted">•</span> <span className="small">{i.topic}</span></>}</div>
             <div className="row" style={{ gap: 6 }}>
               {i.studyMin > 0 && <Badge tone="primary">📖 مطالعه {formatDuration(i.studyMin)}</Badge>}
               {i.testMin > 0 && <Badge tone="accent">📝 تست {formatDuration(i.testMin)}</Badge>}

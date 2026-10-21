@@ -413,7 +413,7 @@ export const purchaseRequests = sqliteTable('purchase_requests', {
   id: id(),
   trackingCode: text('tracking_code').notNull().unique(),
   kind: text('kind', { enum: ['new', 'renew'] }).notNull().default('new'),
-  status: text('status', { enum: ['pending', 'approved', 'rejected', 'registered'] }).notNull().default('pending'),
+  status: text('status', { enum: ['pending', 'approved', 'payment_review', 'paid', 'rejected', 'registered'] }).notNull().default('pending'),
   planId: text('plan_id').references(() => plans.id, { onDelete: 'set null' }),
   /** فقط برای تمدید */
   schoolId: text('school_id').references(() => schools.id, { onDelete: 'set null' }),
@@ -431,9 +431,26 @@ export const purchaseRequests = sqliteTable('purchase_requests', {
   /** قیمت نهایی (در زمان ثبت از تعرفه کپی می‌شود؛ ادمین می‌تواند تخفیف بدهد) */
   priceToman: integer('price_toman').notNull().default(0),
   adminNote: text('admin_note'),
+  /** رسید پرداخت که خریدار ثبت می‌کند (شماره‌ی پیگیری بانکی / چهار رقم آخر کارت) */
+  payRef: text('pay_ref'),
+  payNote: text('pay_note'),
+  paySubmittedAt: integer('pay_submitted_at', { mode: 'timestamp' }),
+  /** نشست موقتِ پیگیری (هش توکن کوکی) */
+  applicantTokenHash: text('applicant_token_hash'),
   decidedBy: text('decided_by').references(() => users.id, { onDelete: 'set null' }),
   decidedAt: integer('decided_at', { mode: 'timestamp' }),
   registeredAt: integer('registered_at', { mode: 'timestamp' }),
   createdSchoolId: text('created_school_id'),
   createdAt: createdAt(),
 }, (t) => [index('purchase_status_idx').on(t.status)]);
+
+/** درخواست «فراموشی رمز عبور»: مدیر/معاونِ مدرسه (یا مدیرکل برای مدیران) پس از شناختنِ فرد، رمز موقت می‌سازد */
+export const passwordResets = sqliteTable('password_resets', {
+  id: id(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  claimedName: text('claimed_name'),
+  status: text('status', { enum: ['pending', 'done', 'dismissed'] }).notNull().default('pending'),
+  handledBy: text('handled_by').references(() => users.id, { onDelete: 'set null' }),
+  handledAt: integer('handled_at', { mode: 'timestamp' }),
+  createdAt: createdAt(),
+}, (t) => [index('pwreset_status_idx').on(t.status), index('pwreset_user_idx').on(t.userId)]);

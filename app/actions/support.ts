@@ -1,4 +1,5 @@
 'use server';
+import { checkPassword } from '@/lib/password-policy';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { and, eq, ne, count } from 'drizzle-orm';
@@ -65,7 +66,7 @@ export async function createAdmin(_: ActionState, fd: FormData): Promise<ActionS
     if (!p.success) return fail(firstZodError(p.error));
     if ((await db.select({ id: users.id }).from(users).where(eq(users.username, p.data.username)).limit(1)).length) return fail('این نام کاربری قبلاً استفاده شده است.');
     const typed = String(fd.get('password') ?? '').trim();
-    if (typed && typed.length < 8) return fail('رمز عبور باید حداقل ۸ نویسه باشد.');
+    if (typed) { const bad = checkPassword(typed, { username: p.data.username }); if (bad) return fail(bad); }
     const password = typed || tempPassword();
     const [u] = await db.insert(users).values({ ...p.data, role: 'ADMIN', isOwner: false, passwordHash: await bcrypt.hash(password, 10), mustChangePassword: true }).returning();
     await audit(me.id, 'ADMIN_CREATE', 'user', u.id, p.data.username);

@@ -29,7 +29,7 @@ export default async function AdminSettings() {
             <div className="field"><label>تعرفه‌ی تمدید</label><select name="planId" defaultValue={offers[0].id}>{offers.map((p) => <option key={p.id} value={p.id}>{p.name} — {toman(p.priceToman)} / {fa(p.months)} ماه</option>)}</select></div>
             <div className="field"><label>توضیحات (اختیاری)</label><input name="note" maxLength={500} /></div>
             <p className="hint-t">مدت جدید به انتهای اشتراک فعلی اضافه می‌شود. پرداخت را با ادمین هماهنگ کنید.</p></div></ActionForm>)) : <p className="muted small">فعلاً تعرفه‌ای برای تمدید منتشر نشده است.</p>) : <p className="muted small">تمدید اشتراک را مدیر مدرسه انجام می‌دهد.</p>}
-        {reqs.length > 0 && <div className="muted small" style={{ marginTop: 10 }}>سابقه: {reqs.map(({ r, plan }) => `${plan ?? '—'} (${{ pending: 'در انتظار', approved: 'تأیید', rejected: 'رد شد', registered: 'تمدید شد' }[r.status]})`).join(' • ')}</div>}
+        {reqs.length > 0 && <div className="muted small" style={{ marginTop: 10 }}>سابقه: {reqs.map(({ r, plan }) => `${plan ?? '—'} (${{ pending: 'در انتظار', approved: 'تأیید', payment_review: 'در حال بررسی', paid: 'پرداخت تأیید شد', rejected: 'رد شد', registered: 'تمدید شد' }[r.status]})`).join(' • ')}</div>}
       </Card>
       <div style={{ height: 16 }} />
       <Card title="مدرسه و بازه‌ی ثبت گزارش مطالعه">

@@ -35,7 +35,7 @@ export function sessionDuration(startTime: string, endTime: string): number | nu
 const int = (min: number, max: number, msg?: string) => z.coerce.number({ message: msg }).int(msg).min(min, msg).max(max, msg);
 
 export const testSchema = z.object({
-  source: z.string().trim().min(1, 'نام منبع/آزمون را بنویسید.').max(100),
+  source: z.string().trim().max(100).default(''),
   totalCount: int(1, 1000),
   correctCount: int(0, 1000),
   wrongCount: int(0, 1000),
@@ -50,14 +50,14 @@ export const testSchema = z.object({
 export const studyItemSchema = z.object({
   subjectId: z.string().min(1, 'درس را انتخاب کنید.'),
   studyMin: int(0, 720).default(0),
-  topic: z.string().trim().min(2, 'مبحث هر درس را بنویسید.').max(200),
+  topic: z.string().trim().max(200).default(''),
   methods: z.array(z.enum(STUDY_METHODS)).default([]),
   pages: int(0, 2000).default(0),
   mastery: int(1, 5).default(3),
   goal: z.string().trim().max(300).optional(),
   goalAchieved: z.boolean().optional(),
   tests: z.array(testSchema).max(10).default([]),
-}).refine((i) => i.studyMin + i.tests.reduce((a, t) => a + t.durationMin, 0) > 0, { message: 'برای هر درس زمان مطالعه یا دسته تست (با زمانش) را وارد کنید.' })
+}).refine((i) => i.studyMin + i.tests.reduce((a, t) => a + t.durationMin, 0) > 0, { message: 'برای هر کتاب زمان مطالعه یا یک تست (با زمانش) را وارد کنید.' })
   // زمان تست جداگانه وارد نمی‌شود؛ مجموع زمانِ دسته‌های تستِ همان درس است
   .transform((i) => ({ ...i, testMin: i.tests.reduce((a, t) => a + t.durationMin, 0) }));
 
@@ -65,8 +65,8 @@ export const studyReportSchema = z.object({
   studentId: z.string().optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   /** بازه‌ی کلِ نشست (شروع تا پایان)؛ مجموع زمانِ درس‌ها نباید از آن بیشتر باشد */
-  startTime: z.string().refine((v) => parseHM(v) !== null, 'ساعت شروع معتبر نیست.'),
-  endTime: z.string().refine((v) => parseHM(v) !== null, 'ساعت پایان معتبر نیست.'),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
   items: z.array(studyItemSchema).min(1, 'حداقل یک درس اضافه کنید.').max(10, 'حداکثر ۱۰ درس در یک گزارش.'),
   notes: z.string().trim().max(1000).optional(),
 }).refine((r) => new Set(r.items.map((i) => i.subjectId)).size === r.items.length, { message: 'یک درس را فقط یک بار در گزارش بیاورید.' });

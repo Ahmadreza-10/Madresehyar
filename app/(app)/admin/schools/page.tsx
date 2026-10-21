@@ -3,8 +3,9 @@ import { asc, count, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { schools, users } from '@/db/schema';
 import { createSchool, updateSchool } from '@/app/actions/admin';
-import { extendSchool } from '@/app/actions/plans';
-import { daysLeft } from '@/lib/subscription';
+import { deleteSchool, extendSchool } from '@/app/actions/plans';
+import { deactivateExpiredSchools } from '@/lib/expiry';
+import { daysLeft, isExpired } from '@/lib/subscription';
 import { formatJalali } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
 import { fa, fullName } from '@/lib/format';
@@ -16,6 +17,7 @@ export const metadata = { title: 'مدارس و مدیران' };
 
 export default async function SchoolsPage() {
   await requireUser(['ADMIN']);
+  await deactivateExpiredSchools();
   const list = await db.select().from(schools).orderBy(asc(schools.name));
   const per = await db.select({ schoolId: users.schoolId, role: users.role, n: count() }).from(users).groupBy(users.schoolId, users.role);
   const mgrs = await db.select().from(users).where(eq(users.status, 'active'));
@@ -36,6 +38,7 @@ export default async function SchoolsPage() {
               <div className="chips" style={{ marginBottom: 12 }}>{heads.length ? heads.map((h) => <Badge key={h.id} tone="primary">{roleTitle(h)}: {fullName(h)}</Badge>) : <Badge tone="warn">مدیر یا معاونی ثبت نشده</Badge>}</div>
               <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                 <Link className="btn sm" href={`/admin/users?school=${sc.id}`}>مدیران و معاونان این مدرسه ←</Link>
+                {isExpired(sc.subscriptionEndsAt) && <ActionForm action={deleteSchool} submit="حذف مدرسه" danger small inline className="" confirm={`مدرسه‌ی «${sc.name}» با همه‌ی کاربران و داده‌هایش برای همیشه حذف می‌شود. ادامه می‌دهید؟`}><input type="hidden" name="id" value={sc.id} /></ActionForm>}
                 <details><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>ویرایش / غیرفعال‌سازی</summary>
                   <div style={{ marginTop: 12, minWidth: 280 }}><ActionForm action={updateSchool} submit="ذخیره" resetOnSuccess={false}><input type="hidden" name="id" value={sc.id} />
                     <div className="field"><label>نام</label><input name="name" defaultValue={sc.name} required /></div>

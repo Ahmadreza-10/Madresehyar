@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
-import { classes, schools, users, type Role } from '@/db/schema';
-import { createUser, setViceTitle, deleteUser, resetPassword, updateUser } from '@/app/actions/admin';
+import { classes, passwordResets, schools, users, type Role } from '@/db/schema';
+import { createUser, setViceTitle, deleteUser, resetPassword, updateUser, fulfillPasswordReset, dismissPasswordReset } from '@/app/actions/admin';
 import { requireUser } from '@/lib/auth';
 import { roleLabels, roleTitle } from '@/lib/permissions';
 import { fa, fullName } from '@/lib/format';
@@ -23,6 +23,8 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
   const cls = superUser ? [] : await db.select().from(classes).where(eq(classes.schoolId, me.schoolId!)).orderBy(asc(classes.name));
   const all = await db.select({ u: users, className: classes.name, schoolName: schools.name }).from(users).leftJoin(classes, eq(classes.id, users.classId)).leftJoin(schools, eq(schools.id, users.schoolId))
     .where(and(inArray(users.role, ROLES), schoolFilter ? eq(users.schoolId, schoolFilter) : undefined)).orderBy(asc(users.role), asc(users.lastName));
+  const resets = await db.select({ r: passwordResets, u: users }).from(passwordResets).innerJoin(users, eq(users.id, passwordResets.userId))
+    .where(and(eq(passwordResets.status, 'pending'), inArray(users.role, ROLES), superUser ? undefined : eq(users.schoolId, me.schoolId!))).orderBy(asc(passwordResets.createdAt));
   const role = ROLES.includes(sp.role as Role) ? (sp.role as Role) : undefined; const q = (sp.q ?? '').trim();
   const list = all.filter((r) => (!role || r.u.role === role) && (!q || fullName(r.u).includes(q) || r.u.username.includes(q.toLowerCase())));
   const counts = Object.fromEntries(ROLES.map((r) => [r, all.filter((x) => x.u.role === r).length]));
@@ -40,6 +42,18 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
         <form className="row" action="/admin/users"><input name="q" defaultValue={q} placeholder="جستجو…" style={{ width: 180 }} />{role && <input type="hidden" name="role" value={role} />}{superUser && schoolFilter && <input type="hidden" name="school" value={schoolFilter} />}<button className="btn ghost sm">جستجو</button></form>
       </PageHead>
       {me.role === 'PRINCIPAL' && (<><Card title="معاونان مدرسه و عنوان‌شان">{vices.length ? <div className="stack">{vices.map((v) => (<div key={v.id}><div className="row" style={{ marginBottom: 6 }}><Initial name={v.firstName} /><b>{fullName(v)}</b><Badge tone="primary">{roleTitle(v)}</Badge></div>{viceForm(v.id, v.viceTitle)}</div>))}</div> : <Empty text="هنوز معاونی برای مدرسه‌ی شما ثبت نشده است. مدیرکل سامانه معاونان را اضافه می‌کند." icon="users" />}</Card><div style={{ height: 16 }} /></>)}
+      {resets.length > 0 && (
+        <Card title={`درخواست‌های فراموشی رمز (${fa(resets.length)})`}>
+          <p className="muted small" style={{ marginBottom: 10 }}>این افراد رمزشان را فراموش کرده‌اند. اگر مطمئنید خودشان هستند «ساخت رمز موقت» را بزنید و رمز را فقط به خودِ آن‌ها بدهید.</p>
+          <div className="stack">{resets.map(({ r, u }) => (
+            <div className="row between" key={r.id} style={{ flexWrap: 'wrap', gap: 10 }}>
+              <div><b>{fullName(u)}</b> <Badge tone={roleTone[u.role]}>{roleTitle(u)}</Badge>{r.claimedName && <span className="muted small"> • نوشته: {r.claimedName}</span>}<div className="muted small" dir="ltr" style={{ textAlign: 'right' }}>{u.username}{u.phone ? ` • ${u.phone}` : ''}</div></div>
+              <div className="row" style={{ alignItems: 'flex-start', gap: 8 }}>
+                <ActionForm action={fulfillPasswordReset} submit="ساخت رمز موقت" small inline resetOnSuccess={false}><input type="hidden" name="id" value={r.id} /></ActionForm>
+                <ActionForm action={dismissPasswordReset} submit="نادیده" small danger inline><input type="hidden" name="id" value={r.id} /></ActionForm>
+              </div>
+            </div>))}</div>
+        </Card>)}
       <Card title="افزودن کاربر جدید">
         <details><summary className="btn sm" style={{ display: 'inline-flex' }}>+ کاربر جدید</summary>
           <div style={{ marginTop: 16 }}>
@@ -51,7 +65,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                 {roleSelect()}{classSelect()}
                 {superUser && <div className="field"><label>عنوان معاون <span className="muted">(فقط برای معاون)</span></label><input name="viceTitle" list="vice-titles" maxLength={40} placeholder="مثلاً: معاون پرورشی" /></div>}
                 <div className="field"><label>موبایل</label><input name="phone" dir="ltr" inputMode="tel" /></div>
-                <div className="field"><label>رمز عبور <span className="muted">(خالی = ساخت خودکار)</span></label><input name="password" dir="ltr" minLength={8} /></div>
+                <div className="field"><label>رمز عبور <span className="muted">(خالی = ساخت خودکار)</span></label><input name="password" dir="ltr" minLength={10} /></div>
               </div>
             </ActionForm>
           </div>

@@ -18,7 +18,7 @@ function navFor(user: CurrentUser): NavItem[] {
   ];
   const staff: NavItem[] = [{ href: '/students', label: 'دانش‌آموزان', icon: 'users', group: 'مدیریت کلاس' }];
   const manage: NavItem[] = [
-    { href: '/admin/users', label: 'کاربران مدرسه', icon: 'shield', group: 'مدیریت مدرسه' }, { href: '/admin/classes', label: 'کلاس‌ها و درس‌ها', icon: 'school' },
+    { href: '/admin/users', label: 'کاربران مدرسه', icon: 'shield', group: 'مدیریت مدرسه' }, { href: '/admin/classes', label: 'کلاس‌ها', icon: 'school' },
     { href: '/admin/settings', label: 'تنظیمات مدرسه', icon: 'settings' },
   ];
   if (role === 'ADMIN') return [home, { href: '/admin/schools', label: 'مدارس و مدیران', icon: 'school', group: 'مدیریت سامانه' }, ...(user.isOwner ? [{ href: '/admin/audit', label: 'گزارش فعالیت‌ها', icon: 'log' } as NavItem] : []), { href: '/messages', label: 'پیام‌ها', icon: 'mail' }, { href: '/admin/requests', label: 'درخواست‌های ثبت‌نام', icon: 'check' }, { href: '/admin/plans', label: 'تعرفه‌ها', icon: 'settings' }, { href: '/admin/support', label: 'پشتیبانی', icon: 'mail' }, { href: '/admin/admins', label: 'مدیران سامانه', icon: 'shield' }];
@@ -31,8 +31,8 @@ function navFor(user: CurrentUser): NavItem[] {
 
 const ILLUS: Record<string, IllusName> = { '/dashboard': 'school', '/study': 'study', '/students': 'students', '/grades': 'grades', '/report-card': 'report', '/discipline': 'discipline', '/schedule': 'schedule', '/messages': 'messages', '/attendance': 'attendance', '/assignments': 'assignments', '/announcements': 'announcements', '/admin/users': 'users', '/admin/classes': 'school', '/admin/settings': 'settings', '/admin/audit': 'log', '/admin/schools': 'school', '/advisor': 'advisor', '/teacher-schedule': 'teacher', '/classmates': 'students', '/help': 'help', '/admin/support': 'messages', '/admin/requests': 'announcements', '/admin/plans': 'report', '/admin/admins': 'users' };
 
-export default function Shell({ user, schoolName, unread = 0, pendingRequests = 0, children }: { user: CurrentUser; schoolName: string; unread?: number; pendingRequests?: number; children: React.ReactNode }) {
-  const items = navFor(user).map((i) => ({ ...i, illus: ILLUS[i.href], ...(i.href === '/messages' ? { badge: unread } : {}), ...(i.href === '/admin/requests' ? { badge: pendingRequests } : {}) }));
+export default function Shell({ user, schoolName, unread = 0, pendingRequests = 0, pendingResets = 0, children }: { user: CurrentUser; schoolName: string; unread?: number; pendingRequests?: number; pendingResets?: number; children: React.ReactNode }) {
+  const items = navFor(user).map((i) => ({ ...i, illus: ILLUS[i.href], ...(i.href === '/messages' ? { badge: unread } : {}), ...(i.href === '/admin/requests' ? { badge: pendingRequests } : {}), ...(i.href === '/admin/users' ? { badge: pendingResets } : {}) }));
   const name = `${user.firstName} ${user.lastName}`;
   const logout = (<form action={logoutAction}><button className="btn ghost sm" aria-label="خروج"><Icon name="logout" /> خروج</button></form>);
   const mobileItems = items.filter((i) => !i.href.startsWith('/admin') || i.href === '/admin/users' || i.href === '/admin/schools' || i.href === '/admin/support' || i.href === '/admin/requests' || i.href === '/admin/plans');

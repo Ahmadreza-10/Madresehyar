@@ -76,7 +76,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       </div>
 
       <div style={{ height: 16 }} />
-      <Collapse title="معدل و رتبه‌ی ماه‌به‌ماه و کل سال" hint="برای دیدن یک ماه، روی نام آن بزنید" defaultOpen>
+      <Collapse title="معدل و رتبه‌ی ماه‌به‌ماه و کل سال" hint="برای دیدن یک ماه، روی نام آن بزنید">
         {shownMonths.length ? <div className="table-wrap"><table><thead><tr><th>بازه</th><th>معدل</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
           {[...shownMonths.map(({ m, r }) => ({ key: m.key, label: m.label, r })), { key: 'year', label: 'کل سال', r: yearRes }].map(({ key, label, r }) => (
             <tr key={key} className={key === period.key ? 'me-row' : ''} style={key === 'year' ? { fontWeight: 800 } : undefined}>
@@ -87,7 +87,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       </Collapse>
 
       <div style={{ height: 16 }} />
-      <Collapse title={`نمرات و رتبه‌ی هر درس (${period.label})`} hint="رتبه در کلاس و پایه برای هر درس" defaultOpen>
+      <Collapse title={`نمرات و رتبه‌ی هر درس (${period.label})`} hint="رتبه در کلاس و پایه برای هر درس">
         {subj.length ? <div className="table-wrap"><table><thead><tr><th>درس</th><th>نمره‌ی دانش‌آموز</th><th>نمودار</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
           {subj.map((m) => (<tr key={m.subjectId}><td><b>{m.name}</b><div className="muted small">{fa(m.count)} نمره</div></td><td><Badge tone={tone(m.avg)}>{fa(m.avg)}</Badge></td>
             <td style={{ minWidth: 110 }}><div className="cmp-bar"><span style={{ width: `${Math.min(100, (m.avg / 20) * 100)}%` }} /><b style={{ insetInlineStart: `${Math.min(100, ((m.classAvg ?? 0) / 20) * 100)}%` }} /></div></td>

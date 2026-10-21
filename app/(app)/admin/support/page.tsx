@@ -26,7 +26,7 @@ export default async function SupportInbox() {
           <div className="muted small" style={{ marginBottom: 8 }}>{fullName(u)} • {roleTitle(u)}{school ? ` • ${school}` : ''} • @{u.username} • {formatJalali(t.createdAt.toISOString().slice(0, 10))}</div>
           <div style={{ whiteSpace: 'pre-wrap' }}>{t.body}</div>
           {t.reply && <div className="feedback" style={{ marginTop: 10 }}><b>پاسخ:</b> <span style={{ whiteSpace: 'pre-wrap' }}>{t.reply}</span></div>}
-          {t.status !== 'closed' && (<details style={{ marginTop: 10 }} open={t.status === 'open'}><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>{t.reply ? 'ویرایش پاسخ' : 'پاسخ دادن'}</summary>
+          {t.status !== 'closed' && (<details style={{ marginTop: 10 }}><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>{t.reply ? 'ویرایش پاسخ' : 'پاسخ دادن'}</summary>
             <div style={{ marginTop: 10, maxWidth: 560 }}><ActionForm action={replyTicket} submit="ثبت پاسخ" resetOnSuccess={false} small><input type="hidden" name="id" value={t.id} /><textarea name="reply" defaultValue={t.reply ?? ''} required maxLength={2000} placeholder="پاسخ برای کاربر…" /></ActionForm></div></details>)}
         </Card>)) : <Card><Empty text="هنوز پیامی نرسیده است." icon="mail" /></Card>}</div>
     </>
