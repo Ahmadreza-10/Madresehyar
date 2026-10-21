@@ -45,6 +45,18 @@ export async function visibleClassIds(u: CurrentUser): Promise<string[]> {
 }
 
 /** دانش‌آموزانی که کاربر مجاز به دیدن‌شان است (همیشه فقط از مدرسه‌ی خودش) */
+/** معلم فقط نمره و رتبه‌ی «درس‌هایی که خودش تدریس می‌کند» را می‌بیند؛ برای بقیه‌ی نقش‌ها null (بدون محدودیت).
+ *  اگر classId داده شود، فقط درس‌های همان کلاس. خروجیِ [] یعنی معلم هیچ درسی در آن کلاس ندارد. */
+export async function teacherSubjectIds(u: CurrentUser, classId?: string | null): Promise<string[] | null> {
+  if (u.role !== 'TEACHER') return null;
+  const rows = await db.select({ s: classSubjects.subjectId, c: classSubjects.classId }).from(classSubjects).where(eq(classSubjects.teacherId, u.id));
+  return [...new Set(rows.filter((r) => !classId || r.c === classId).map((r) => r.s))];
+}
+export async function subjectNames(ids: string[]): Promise<string[]> {
+  if (!ids.length) return [];
+  return (await db.select({ n: subjects.name }).from(subjects).where(inArray(subjects.id, ids))).map((r) => r.n);
+}
+
 export async function visibleStudentIds(u: CurrentUser): Promise<string[]> {
   if (!u.schoolId) return [];
   if (isManager(u.role)) return (await db.select({ id: users.id }).from(users).where(and(eq(users.role, 'STUDENT'), eq(users.schoolId, u.schoolId)))).map((r) => r.id);

@@ -7,10 +7,12 @@ import { requireUser } from '@/lib/auth';
 import { roleLabels, roleTitle } from '@/lib/permissions';
 import { fa, fullName } from '@/lib/format';
 import ActionForm from '@/components/ActionForm';
+import { Collapse } from '@/components/Interactive';
 import { Badge, Card, Empty, Initial, PageHead } from '@/components/ui';
 
 export const metadata = { title: 'کاربران و دسترسی‌ها' };
 const VICE_TITLES = ['معاون آموزشی', 'معاون پرورشی', 'معاون اجرایی', 'معاون فرهنگی', 'معاون پشتیبانی', 'معاون اداری و مالی'];
+const GROUP_TITLE: Record<Role, string> = { ADMIN: 'مدیران کل', PRINCIPAL: 'مدیران مدرسه', VICE: 'معاونان', TEACHER: 'معلمان', STUDENT: 'دانش‌آموزان', PARENT: 'اولیا' };
 const roleTone = { ADMIN: 'danger', PRINCIPAL: 'primary', VICE: 'primary', TEACHER: 'accent', STUDENT: 'ok', PARENT: '' } as const;
 
 export default async function AdminUsers({ searchParams }: { searchParams: Promise<{ role?: string; q?: string; school?: string }> }) {
@@ -41,9 +43,9 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
       <PageHead illus="users" title={superUser ? 'مدیران و معاونان مدارس' : 'کاربران مدرسه'} sub={superUser ? 'مدیرکل سامانه مدیر و معاونِ هر مدرسه را اضافه و مدیریت می‌کند. بقیه‌ی کاربران را مدیر یا معاونِ همان مدرسه اضافه می‌کند.' : 'معلم، دانش‌آموز و ولیِ مدرسه‌ی خودتان را اضافه کنید و دسترسی‌شان را مدیریت کنید.'}>
         <form className="row" action="/admin/users"><input name="q" defaultValue={q} placeholder="جستجو…" style={{ width: 180 }} />{role && <input type="hidden" name="role" value={role} />}{superUser && schoolFilter && <input type="hidden" name="school" value={schoolFilter} />}<button className="btn ghost sm">جستجو</button></form>
       </PageHead>
-      {me.role === 'PRINCIPAL' && (<><Card title="معاونان مدرسه و عنوان‌شان">{vices.length ? <div className="stack">{vices.map((v) => (<div key={v.id}><div className="row" style={{ marginBottom: 6 }}><Initial name={v.firstName} /><b>{fullName(v)}</b><Badge tone="primary">{roleTitle(v)}</Badge></div>{viceForm(v.id, v.viceTitle)}</div>))}</div> : <Empty text="هنوز معاونی برای مدرسه‌ی شما ثبت نشده است. مدیرکل سامانه معاونان را اضافه می‌کند." icon="users" />}</Card><div style={{ height: 16 }} /></>)}
+      {me.role === 'PRINCIPAL' && (<><Collapse title="معاونان مدرسه و عنوان‌شان" hint="مدیر مشخص می‌کند هر معاون چه معاونی است" badge={<Badge tone="primary">{fa(vices.length)} نفر</Badge>}>{vices.length ? <div className="stack">{vices.map((v) => (<div key={v.id}><div className="row" style={{ marginBottom: 6 }}><Initial name={v.firstName} /><b>{fullName(v)}</b><Badge tone="primary">{roleTitle(v)}</Badge></div>{viceForm(v.id, v.viceTitle)}</div>))}</div> : <Empty text="هنوز معاونی برای مدرسه‌ی شما ثبت نشده است. مدیرکل سامانه معاونان را اضافه می‌کند." icon="users" />}</Collapse><div style={{ height: 16 }} /></>)}
       {resets.length > 0 && (
-        <Card title={`درخواست‌های فراموشی رمز (${fa(resets.length)})`}>
+        <><Collapse title="درخواست‌های فراموشی رمز" badge={<Badge tone="warn">{fa(resets.length)} درخواست</Badge>}>
           <p className="muted small" style={{ marginBottom: 10 }}>این افراد رمزشان را فراموش کرده‌اند. اگر مطمئنید خودشان هستند «ساخت رمز موقت» را بزنید و رمز را فقط به خودِ آن‌ها بدهید.</p>
           <div className="stack">{resets.map(({ r, u }) => (
             <div className="row between" key={r.id} style={{ flexWrap: 'wrap', gap: 10 }}>
@@ -53,10 +55,8 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                 <ActionForm action={dismissPasswordReset} submit="نادیده" small danger inline><input type="hidden" name="id" value={r.id} /></ActionForm>
               </div>
             </div>))}</div>
-        </Card>)}
-      <Card title="افزودن کاربر جدید">
-        <details><summary className="btn sm" style={{ display: 'inline-flex' }}>+ کاربر جدید</summary>
-          <div style={{ marginTop: 16 }}>
+        </Collapse><div style={{ height: 16 }} /></>)}
+      <Collapse title="➕ افزودن کاربر جدید" hint="برای ساخت معلم، دانش‌آموز یا ولی">
             <ActionForm action={createUser} submit="ساخت کاربر" resetOnSuccess>
               <div className="inline-fields">
                 <div className="field"><label>نام</label><input name="firstName" required /></div><div className="field"><label>نام خانوادگی</label><input name="lastName" required /></div>
@@ -68,14 +68,14 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                 <div className="field"><label>رمز عبور <span className="muted">(خالی = ساخت خودکار)</span></label><input name="password" dir="ltr" minLength={10} /></div>
               </div>
             </ActionForm>
-          </div>
-        </details>
-      </Card>
+      </Collapse>
       <div className="row" style={{ margin: '18px 0 10px' }}>
         <div className="seg" style={{ flexWrap: 'wrap' }}><Link href={`/admin/users${schoolFilter && superUser ? `?school=${schoolFilter}` : ''}`} className={!role ? 'on' : ''}>همه ({fa(all.length)})</Link>{ROLES.map((r) => <Link key={r} href={`/admin/users?role=${r}${superUser && schoolFilter ? `&school=${schoolFilter}` : ''}`} className={role === r ? 'on' : ''}>{roleLabels[r]} ({fa(counts[r])})</Link>)}</div>
       </div>
       {!list.length ? <Card><Empty text="کاربری پیدا نشد." icon="users" /></Card> : (
-        <div className="stack">{list.map(({ u, className, schoolName }) => (
+        <div className="stack">{ROLES.filter((r) => list.some((x) => x.u.role === r)).map((r) => (
+          <Collapse key={r} title={GROUP_TITLE[r]} hint="روی نام هر نفر بزنید تا ویرایش و رمز و حذف باز شود" badge={<Badge tone={roleTone[r] || undefined}>{fa(list.filter((x) => x.u.role === r).length)} نفر</Badge>}>
+            <div className="stack">{list.filter((x) => x.u.role === r).map(({ u, className, schoolName }) => (
           <Card key={u.id}>
             <details>
               <summary className="row between"><div className="row"><Initial name={u.firstName} /><div><b>{fullName(u)}</b><div className="muted small" dir="ltr" style={{ textAlign: 'right' }}>{u.username}</div></div></div>
@@ -98,7 +98,8 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                 {u.lastLoginAt && <div className="muted small">آخرین ورود: {new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tehran' }).format(u.lastLoginAt)}</div>}
               </div>
             </details>
-          </Card>))}</div>)}
+          </Card>))}</div>
+          </Collapse>))}</div>)}
     </>
   );
 }

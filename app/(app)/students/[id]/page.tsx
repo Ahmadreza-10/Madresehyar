@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { attendance, classes, grades, parentStudents, studentNotes, subjects, users } from '@/db/schema';
 import { addNote, deleteGrade } from '@/app/actions/school';
 import { requireSchoolUser } from '@/lib/auth';
 import { currentMonthPeriod, loadRankContext, resultFor } from '@/lib/ranking';
-import { canAccessStudent, isManager, isStaff } from '@/lib/permissions';
+import { canAccessStudent, isManager, isStaff, teacherSubjectIds } from '@/lib/permissions';
 import { attendanceLabels, gradeTypeLabels } from '@/lib/school-data';
 import { flattenItems, loadReports } from '@/lib/study-data';
 import { summarize } from '@/lib/study-stats';
@@ -29,12 +29,15 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
   const canSeeStudy = u.role !== 'TEACHER'; // معلم مطالعه‌ی کلی دانش‌آموز را نمی‌بیند
   const reports = canSeeStudy ? await loadReports({ studentIds: [id], from: addDays(today, -29), limit: 100 }) : [];
   const stats = summarize(flattenItems(reports), today);
-  const gr = await db.select({ g: grades, subject: subjects.name }).from(grades).innerJoin(subjects, eq(subjects.id, grades.subjectId)).where(eq(grades.studentId, id)).orderBy(desc(grades.date)).limit(30);
+  // معلم فقط نمره‌ی درس‌های خودش را می‌بیند
+  const mySubjects = await teacherSubjectIds(u, st.s.classId); const onlyMine = mySubjects !== null;
+  const grCond = onlyMine ? and(eq(grades.studentId, id), inArray(grades.subjectId, mySubjects.length ? mySubjects : ['-'])) : eq(grades.studentId, id);
+  const gr = await db.select({ g: grades, subject: subjects.name }).from(grades).innerJoin(subjects, eq(subjects.id, grades.subjectId)).where(grCond).orderBy(desc(grades.date)).limit(30);
   const att = await db.select().from(attendance).where(eq(attendance.studentId, id)).orderBy(desc(attendance.date)).limit(15);
   const notes = await db.select().from(studentNotes).where(eq(studentNotes.studentId, id)).orderBy(desc(studentNotes.createdAt)).limit(15);
   // شماره‌ی اولیا فقط برای مدیر و معاون
   const parents = isManager(u.role) ? await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, phone: users.phone }).from(parentStudents).innerJoin(users, eq(users.id, parentStudents.parentId)).where(eq(parentStudents.studentId, id)) : [];
-  const ctx = await loadRankContext(id);
+  const ctx = await loadRankContext(id, mySubjects);
   const yr = ctx ? resultFor(ctx, ctx.year) : null; const cmPeriod = ctx ? currentMonthPeriod(ctx) : undefined; const cm = ctx && cmPeriod ? resultFor(ctx, cmPeriod) : null;
   const praise = notes.filter((n) => n.type === 'praise').length; const disc = notes.filter((n) => n.type === 'discipline').length;
   const rk = (r: { rank: number } | null | undefined, n: number | undefined) => (r ? `${fa(r.rank)} از ${fa(n ?? 0)}` : '—');
@@ -48,7 +51,7 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
       <div className="grid g4">
         {canSeeStudy && <Stat label="مطالعه‌ی این هفته" value={formatDuration(stats.weekMin)} icon="study" tone="accent" />}
         {canSeeStudy && <Stat label="روزهای پیاپی" value={`${fa(stats.streak)} روز`} icon="fire" tone="warn" />}
-        <Stat label="میانگین نمرات" value={avg === null ? '—' : fa(avg)} hint="از ۲۰" icon="grades" tone="ok" />
+        <Stat label={onlyMine ? 'میانگین نمرات درس شما' : 'میانگین نمرات'} value={avg === null ? '—' : fa(avg)} hint="از ۲۰" icon="grades" tone="ok" />
         <Stat label="غیبت و تأخیر" value={fa(att.length)} icon="check" tone="danger" />
       </div>
       <div className="grid g-main" style={{ marginTop: 16 }}>
@@ -59,7 +62,7 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
             <div><span>رتبه در پایه (کل سال)</span><b className="num">{rk(yr?.myGrade, yr?.grd.length)}</b></div>
             {cmPeriod && <div><span>رتبه در کلاس ({cmPeriod.label})</span><b className="num">{rk(cm?.myClass, cm?.cls.length)}</b></div>}
             {cmPeriod && <div><span>رتبه در پایه ({cmPeriod.label})</span><b className="num">{rk(cm?.myGrade, cm?.grd.length)}</b></div>}
-            <div><span>معدل کل سال</span><b className="num">{yr?.myClass ? fa(yr.myClass.avg) : '—'}</b></div>
+            <div><span>{onlyMine ? 'میانگین درس شما (کل سال)' : 'معدل کل سال'}</span><b className="num">{yr?.myClass ? fa(yr.myClass.avg) : '—'}</b></div>
             <div><span>تشویق / انضباطی</span><b className="num">{fa(praise)} / {fa(disc)}</b></div>
           </div>
           {staff && (<ActionForm action={addNote} submit="ثبت یادداشت" small><input type="hidden" name="studentId" value={id} />

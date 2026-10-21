@@ -8,7 +8,7 @@ import { isManager, visibleClassIds, visibleStudentIds } from './permissions';
 /** چه کسانی را می‌شود پیام داد؟ همیشه فقط داخل مدرسه‌ی خود (مدیرکل سامانه فقط با مدیر/معاون مدارس) */
 export async function allowedRecipients(u: CurrentUser) {
   const active = eq(users.status, 'active');
-  const cols = { id: users.id, firstName: users.firstName, lastName: users.lastName, role: users.role, viceTitle: users.viceTitle };
+  const cols = { id: users.id, firstName: users.firstName, lastName: users.lastName, role: users.role, viceTitle: users.viceTitle, avatarPreset: users.avatarPreset, avatarPhotoAt: users.avatarPhotoAt };
   const order = [asc(users.role), asc(users.lastName)] as const;
   if (u.role === 'ADMIN') return db.select(cols).from(users).where(and(active, inArray(users.role, ['PRINCIPAL', 'VICE']))).orderBy(...order);
   if (!u.schoolId) return [];

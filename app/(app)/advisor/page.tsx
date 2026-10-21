@@ -116,7 +116,7 @@ export default async function AdvisorPage({ searchParams }: { searchParams: Prom
   ];
 
   return (
-    <>
+    <div className="compact">
       <PageHead illus="advisor" title="مشاور تحصیلی" sub={`تحلیل خودکار نمرات و مطالعه‌ی ${fullName(st)}`}>
         {kids.length > 1 && <form className="row" action="/advisor"><select name="student" defaultValue={st.id} style={{ width: 200 }}>{kids.map((k) => <option key={k.id} value={k.id}>{fullName(k)}</option>)}</select><button className="btn ghost sm">نمایش</button></form>}
       </PageHead>
@@ -127,6 +127,6 @@ export default async function AdvisorPage({ searchParams }: { searchParams: Prom
       </section>
       <Tabs tabs={tabs} />
       <p className="muted small" style={{ margin: '18px 4px 0' }}>این تحلیل به‌صورت خودکار از روی نمره‌ها و گزارش‌های مطالعه‌ی ثبت‌شده ساخته می‌شود، فقط برای راهنمایی است و جایگزین مشاور انسانی نیست. برای مسائل جدی (افت طولانی، بی‌انگیزگی شدید، اضطراب) با معلم یا مشاور مدرسه صحبت کنید.</p>
-    </>
+    </div>
   );
 }

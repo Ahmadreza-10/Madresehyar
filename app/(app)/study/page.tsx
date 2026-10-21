@@ -136,7 +136,7 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
       ))}
 </>);
   return (
-    <>
+    <div className="compact">
       <PageHead illus="study" title="گزارش مطالعه" sub={user.role === 'STUDENT' ? 'کتاب‌هایی که امروز خواندی و تست‌هایی که زدی را اینجا ثبت کن و پیشرفتت را ببین.' : user.role === 'PARENT' ? 'گزارش مطالعه‌ی روزانه‌ی فرزندتان را اینجا ثبت کنید.' : 'پیگیری مطالعه‌ی دانش‌آموزان (فقط مشاهده و بازخورد)'} />
       <div className="grid g4" style={{ marginBottom: 16 }}>
         <Stat label="مطالعه‌ی امروز" value={formatDuration(stats.todayMin)} icon="clock" tone="primary" />
@@ -154,6 +154,6 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
         { id: 'list', label: '📋 گزارش‌ها', content: listView },
         ...(noStudyView ? [{ id: 'nostudy', label: '🚫 عدم مطالعه', content: noStudyView }] : []),
       ]} initialId={sp.tab} />
-    </>
+    </div>
   );
 }

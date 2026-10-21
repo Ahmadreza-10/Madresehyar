@@ -80,7 +80,8 @@ export default async function GradesPage({ searchParams }: { searchParams: Promi
   const students = classId ? await studentsOfClass(classId, u.schoolId!) : [];
   const recent = subjectId && students.length ? await db.select().from(grades).where(and(eq(grades.subjectId, subjectId), inArray(grades.studentId, students.map((s) => s.id)))).orderBy(desc(grades.date), desc(grades.createdAt)).limit(60) : [];
   const nameOf = new Map(students.map((s) => [s.id, fullName(s)]));
-  const ins = classId ? await gradeInsights({ schoolId: u.schoolId!, classId, periodKey: sp.p ?? 'year', hrefFor: (p) => `/grades?class=${classId}${subjectId ? `&subject=${subjectId}` : ''}&p=${p}` }) : null;
+  const onlyMine = u.role === 'TEACHER'; // معلم فقط رتبه و روند درس‌های خودش را می‌بیند
+  const ins = classId ? await gradeInsights({ schoolId: u.schoolId!, classId, periodKey: sp.p ?? 'year', subjectIds: onlyMine ? subs.map((s) => s.id) : undefined, scopeName: onlyMine ? subs.map((s) => s.name).join('، ') : undefined, hrefFor: (p) => `/grades?class=${classId}${subjectId ? `&subject=${subjectId}` : ''}&p=${p}` }) : null;
 
   return (
     <>

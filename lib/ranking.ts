@@ -7,11 +7,11 @@ import { loadSchoolData } from './school-stats';
 import { isoToJalaliParts } from './jalali';
 
 /** همه‌ی داده‌ی لازم برای رتبه‌بندی یک دانش‌آموز: همکلاسی‌ها، هم‌پایه‌ها و کل مدرسه (همیشه فقط همان مدرسه) */
-export async function loadRankContext(studentId: string) {
+export async function loadRankContext(studentId: string, subjectIds?: string[] | null) {
   const [me] = await db.select().from(users).where(eq(users.id, studentId)).limit(1);
   if (!me || me.role !== 'STUDENT' || !me.schoolId) return null;
   const first = (await db.query.classes.findFirst({ where: (c, { eq: e }) => e(c.id, me.classId ?? '') })) ?? null;
-  const data = await loadSchoolData(me.schoolId, first?.academicYear);
+  const data = await loadSchoolData(me.schoolId, first?.academicYear, subjectIds);
   const cls = data.classes.find((c) => c.id === me.classId) ?? null;
   // هم‌پایه = همه‌ی کلاس‌های همین مدرسه با همان «پایه» (مثلاً همه‌ی دهم‌ها)
   const gradeClasses = cls ? data.classes.filter((c) => c.gradeLevel === cls.gradeLevel) : [];

@@ -1,5 +1,5 @@
 'use server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/db';
@@ -10,7 +10,7 @@ import { audit } from '@/lib/audit';
 import { MAX_PERIODS, MIN_PERIODS } from '@/lib/schedule-config';
 import { setSetting } from '@/lib/settings';
 import { allowedRecipients } from '@/lib/messaging';
-import { readUploads, saveAttachments } from '@/lib/uploads';
+import { deleteAttachmentsOf, readUploads, saveAttachments } from '@/lib/uploads';
 import { classInSchool, schoolOf } from '@/lib/permissions';
 import { fail, firstZodError, run, success, type ActionState } from '@/lib/action';
 
@@ -26,6 +26,55 @@ export async function sendMessage(_: ActionState, fd: FormData): Promise<ActionS
     await audit(u.id, 'MESSAGE_SEND', 'user', p.data.recipientId);
     revalidatePath('/messages');
     return success('پیام ارسال شد.');
+  });
+}
+
+const ANY = ['ADMIN', 'PRINCIPAL', 'VICE', 'TEACHER', 'STUDENT', 'PARENT'] as const;
+
+/** پیام‌رسان: ارسال پیام به یک نفر (بدون موضوع؛ متن یا فایل کافی است) */
+export async function sendChat(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run([...ANY], async (u) => {
+    const recipientId = String(fd.get('recipientId') ?? ''); const body = String(fd.get('body') ?? '').trim();
+    if (!recipientId) return fail('گیرنده مشخص نیست.');
+    if (body.length > 3000) return fail('متن پیام بیش از ۳۰۰۰ نویسه است.');
+    const up = await readUploads(fd); if (!up.ok) return fail(up.error);
+    if (!body && !up.files.length) return fail('متن یا فایل بگذارید.');
+    if (!(await allowedRecipients(u)).some((r) => r.id === recipientId)) return fail('شما اجازه‌ی ارسال پیام به این کاربر را ندارید.');
+    const [msg] = await db.insert(messages).values({ senderId: u.id, recipientId, subject: '', body }).returning({ id: messages.id });
+    await saveAttachments('message', msg.id, u.id, up.files);
+    await audit(u.id, 'MESSAGE_SEND', 'user', recipientId);
+    revalidatePath('/messages');
+    return success();
+  });
+}
+
+/** با باز شدن گفتگو، پیام‌های دریافتیِ آن گفتگو «خوانده‌شده» می‌شود */
+export async function markConversationRead(userId: string) {
+  await run([...ANY], async (u) => {
+    await db.update(messages).set({ readAt: new Date() }).where(and(eq(messages.senderId, userId), eq(messages.recipientId, u.id), isNull(messages.readAt)));
+    revalidatePath('/messages'); revalidatePath('/', 'layout');
+    return success();
+  });
+}
+
+export async function editChatMessage(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run([...ANY], async (u) => {
+    const id = String(fd.get('id') ?? ''); const body = String(fd.get('body') ?? '').trim();
+    if (!body || body.length > 3000) return fail('متن پیام نامعتبر است.');
+    const r = await db.update(messages).set({ body, editedAt: new Date() }).where(and(eq(messages.id, id), eq(messages.senderId, u.id))).returning({ id: messages.id });
+    if (!r.length) return fail('فقط فرستنده می‌تواند پیام را ویرایش کند.');
+    revalidatePath('/messages');
+    return success('ویرایش شد.');
+  });
+}
+
+export async function deleteChatMessage(fd: FormData) {
+  await run([...ANY], async (u) => {
+    const id = String(fd.get('id') ?? '');
+    const r = await db.delete(messages).where(and(eq(messages.id, id), eq(messages.senderId, u.id))).returning({ id: messages.id });
+    if (r.length) await deleteAttachmentsOf('message', id);
+    revalidatePath('/messages'); revalidatePath('/', 'layout');
+    return success();
   });
 }
 
