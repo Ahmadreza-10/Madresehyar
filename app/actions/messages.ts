@@ -3,14 +3,16 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/db';
-import { classes, classSubjects, messages, scheduleSlots, subjects, users } from '@/db/schema';
+import { chatPosts, classes, classSubjects, messages, scheduleSlots, subjects, users } from '@/db/schema';
 import type { CurrentUser } from '@/lib/auth';
 import { parseSlotTimes, slotConflict } from '@/lib/teacher-schedule';
 import { audit } from '@/lib/audit';
 import { MAX_PERIODS, MIN_PERIODS } from '@/lib/schedule-config';
 import { setSetting } from '@/lib/settings';
 import { allowedRecipients } from '@/lib/messaging';
-import { deleteAttachmentsOf, readUploads, saveAttachments } from '@/lib/uploads';
+import { groupAccess } from '@/lib/groups';
+import { copyAttachments, nameOf, planAttachmentEdit, snippetOf } from '@/lib/chat-ops';
+import { deleteAttachmentsOf, listAttachments, readUploads, saveAttachments } from '@/lib/uploads';
 import { classInSchool, schoolOf } from '@/lib/permissions';
 import { fail, firstZodError, run, success, type ActionState } from '@/lib/action';
 
@@ -40,7 +42,15 @@ export async function sendChat(_: ActionState, fd: FormData): Promise<ActionStat
     const up = await readUploads(fd); if (!up.ok) return fail(up.error);
     if (!body && !up.files.length) return fail('متن یا فایل بگذارید.');
     if (!(await allowedRecipients(u)).some((r) => r.id === recipientId)) return fail('شما اجازه‌ی ارسال پیام به این کاربر را ندارید.');
-    const [msg] = await db.insert(messages).values({ senderId: u.id, recipientId, subject: '', body }).returning({ id: messages.id });
+    let replyToId: string | null = null; let replySnippet: string | null = null;
+    const rid = String(fd.get('replyToId') ?? '');
+    if (rid) {
+      const [r] = await db.select().from(messages).where(eq(messages.id, rid)).limit(1);
+      if (r && ((r.senderId === u.id && r.recipientId === recipientId) || (r.senderId === recipientId && r.recipientId === u.id))) {
+        replyToId = r.id; replySnippet = snippetOf(await nameOf(r.senderId), r.body, (await listAttachments('message', [r.id])).length > 0);
+      }
+    }
+    const [msg] = await db.insert(messages).values({ senderId: u.id, recipientId, subject: '', body, replyToId, replySnippet }).returning({ id: messages.id });
     await saveAttachments('message', msg.id, u.id, up.files);
     await audit(u.id, 'MESSAGE_SEND', 'user', recipientId);
     revalidatePath('/messages');
@@ -60,11 +70,46 @@ export async function markConversationRead(userId: string) {
 export async function editChatMessage(_: ActionState, fd: FormData): Promise<ActionState> {
   return run([...ANY], async (u) => {
     const id = String(fd.get('id') ?? ''); const body = String(fd.get('body') ?? '').trim();
-    if (!body || body.length > 3000) return fail('متن پیام نامعتبر است.');
-    const r = await db.update(messages).set({ body, editedAt: new Date() }).where(and(eq(messages.id, id), eq(messages.senderId, u.id))).returning({ id: messages.id });
-    if (!r.length) return fail('فقط فرستنده می‌تواند پیام را ویرایش کند.');
+    if (body.length > 3000) return fail('متن پیام بیش از ۳۰۰۰ نویسه است.');
+    const [m] = await db.select().from(messages).where(and(eq(messages.id, id), eq(messages.senderId, u.id))).limit(1);
+    if (!m) return fail('فقط فرستنده می‌تواند پیام را ویرایش کند.');
+    const plan = await planAttachmentEdit('message', id, fd); if (!plan.ok) return fail(plan.error);
+    if (!body && plan.total === 0) return fail('پیام نمی‌تواند خالی باشد.');
+    await plan.apply(u.id);
+    await db.update(messages).set({ body, editedAt: new Date() }).where(eq(messages.id, id));
     revalidatePath('/messages');
-    return success('ویرایش شد.');
+    return success('ذخیره شد.');
+  });
+}
+
+/** هدایت یک پیام (شخصی یا گروهی) به یک گفتگوی دیگر؛ named=0 یعنی «هدایت بدون نام بردن» */
+export async function forwardMessage(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run([...ANY], async (u) => {
+    const kind = String(fd.get('kind') ?? ''); const srcId = String(fd.get('id') ?? ''); const target = String(fd.get('target') ?? ''); const named = String(fd.get('named') ?? '1') === '1';
+    let body = ''; let authorId: string | null = null; let fromKind: 'message' | 'group_post';
+    if (kind === 'message') {
+      const [m] = await db.select().from(messages).where(eq(messages.id, srcId)).limit(1);
+      if (!m || (m.senderId !== u.id && m.recipientId !== u.id)) return fail('این پیام در دسترس شما نیست.');
+      body = m.body; authorId = m.senderId; fromKind = 'message';
+    } else if (kind === 'post') {
+      const [p] = await db.select().from(chatPosts).where(eq(chatPosts.id, srcId)).limit(1);
+      const a = p ? await groupAccess(u, p.groupId) : null; if (!p || !a) return fail('این پیام در دسترس شما نیست.');
+      body = p.body; authorId = p.authorId; fromKind = 'group_post';
+    } else return fail('پیام نامعتبر است.');
+    const forwardedFrom = named ? await nameOf(authorId) : null;
+    const [tk, tid] = [target.slice(0, 1), target.slice(2)];
+    if (tk === 'u') {
+      if (!(await allowedRecipients(u)).some((r) => r.id === tid)) return fail('به این کاربر نمی‌توانید پیام بدهید.');
+      const [n] = await db.insert(messages).values({ senderId: u.id, recipientId: tid, subject: '', body, forwardedFrom }).returning({ id: messages.id });
+      await copyAttachments(fromKind, srcId, 'message', n.id, u.id);
+    } else if (tk === 'g') {
+      const a = await groupAccess(u, tid); if (!a) return fail('این گروه پیدا نشد.'); if (!a.canPost) return fail('در این کانال فقط مدیران می‌توانند پیام بگذارند.');
+      const [n] = await db.insert(chatPosts).values({ groupId: tid, authorId: u.id, body, forwardedFrom }).returning({ id: chatPosts.id });
+      await copyAttachments(fromKind, srcId, 'group_post', n.id, u.id);
+      revalidatePath(`/messages/groups/${tid}`);
+    } else return fail('مقصد نامعتبر است.');
+    revalidatePath('/messages');
+    return success('هدایت شد.');
   });
 }
 

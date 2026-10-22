@@ -7,11 +7,11 @@ import { requireUser } from '@/lib/auth';
 import { allowedRecipients } from '@/lib/messaging';
 import { roleTitle } from '@/lib/permissions';
 import { fullName } from '@/lib/format';
-import ActionForm from '@/components/ActionForm';
 import { UserAvatar } from '@/components/UserAvatar';
 import { ChatShell, ChatThread } from '@/components/chat/ChatShell';
 import ChatComposer from '@/components/chat/ChatComposer';
 import type { Bubble } from '@/components/chat/Bubbles';
+import { ConfirmForm } from '@/components/chat/BubbleMenu';
 
 export const metadata = { title: 'پیام‌ها' };
 export const dynamic = 'force-dynamic';
@@ -32,14 +32,12 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
       const files = await listAttachments('message', rows.map((m) => m.id));
       const unread = rows.filter((m) => m.recipientId === u.id && !m.readAt).length;
       const bubbles: Bubble[] = rows.map((m) => {
-        const mine = m.senderId === u.id;
+        const mine = m.senderId === u.id; const mf = files.filter((f) => f.ownerId === m.id);
         return {
-          id: m.id, mine, subject: m.subject || undefined, body: m.body, at: m.createdAt, edited: !!m.editedAt, read: mine ? !!m.readAt : undefined,
-          files: files.filter((f) => f.ownerId === m.id), canRemoveFiles: mine,
-          menu: mine ? (<>
-            {m.body && <details className="bmenu-edit"><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>ویرایش</summary>
-              <div style={{ marginTop: 8 }}><ActionForm action={editChatMessage} submit="ذخیره" resetOnSuccess={false} small><input type="hidden" name="id" value={m.id} /><textarea name="body" defaultValue={m.body} required maxLength={3000} style={{ minHeight: 70 }} /></ActionForm></div></details>}
-            <form action={deleteChatMessage}><input type="hidden" name="id" value={m.id} /><button className="btn danger sm">حذف پیام</button></form></>) : undefined,
+          id: m.id, kind: 'message', mine, authorName: mine ? 'شما' : fullName(other), subject: m.subject || undefined, body: m.body, at: m.createdAt, read: mine ? !!m.readAt : undefined,
+          files: mf, canRemoveFiles: false, replyToId: m.replyToId, replySnippet: m.replySnippet, forwardedFrom: m.forwardedFrom,
+          edit: mine ? { action: editChatMessage, body: m.body, files: mf } : undefined,
+          menuExtra: mine ? <ConfirmForm action={deleteChatMessage} id={m.id} label="🗑 حذف پیام" message="این پیام حذف شود؟" /> : undefined,
         };
       });
       thread = (

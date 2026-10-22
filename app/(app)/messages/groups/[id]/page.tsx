@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui';
 import { ChatShell, ChatThread } from '@/components/chat/ChatShell';
 import ChatComposer from '@/components/chat/ChatComposer';
 import type { Bubble } from '@/components/chat/Bubbles';
+import { ConfirmForm, PlainForm } from '@/components/chat/BubbleMenu';
 
 export const metadata = { title: 'گروه' };
 export const dynamic = 'force-dynamic';
@@ -37,15 +38,15 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const addable = staff.filter((s) => !memberIds.has(s.id));
 
   const bubbles: Bubble[] = posts.map((p) => {
-    const mine = p.authorId === u.id; const canDel = mine || a.canModerate; const au1 = p.authorId ? au.get(p.authorId) : undefined;
-    const menu = (mine || a.manager || a.canModerate) ? (<>
-      {(mine || a.manager) && <details className="bmenu-edit"><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>ویرایش</summary>
-        <div style={{ marginTop: 8 }}><ActionForm action={updatePost} submit="ذخیره" resetOnSuccess={false} small><input type="hidden" name="id" value={p.id} /><textarea name="body" defaultValue={p.body} required maxLength={4000} style={{ minHeight: 70 }} /></ActionForm></div></details>}
-      {a.canModerate && <form action={togglePinPost}><input type="hidden" name="id" value={p.id} /><button className="btn ghost sm">{p.pinned ? '📌 برداشتن سنجاق' : '📌 سنجاق'}</button></form>}
-      {canDel && <form action={deletePost}><input type="hidden" name="id" value={p.id} /><button className="btn danger sm">حذف پیام</button></form>}</>) : undefined;
+    const mine = p.authorId === u.id; const canDel = mine || a.canModerate; const au1 = p.authorId ? au.get(p.authorId) : undefined; const pf = files.filter((f) => f.ownerId === p.id);
+    const menuExtra = (a.canModerate || canDel) ? (<>
+      {a.canModerate && <PlainForm action={togglePinPost} id={p.id} label={p.pinned ? '📌 برداشتن سنجاق' : '📌 سنجاق'} />}
+      {canDel && <ConfirmForm action={deletePost} id={p.id} label="🗑 حذف پیام" message="این پیام حذف شود؟" />}</>) : undefined;
     return {
-      id: p.id, mine, author: au1 ? `${fullName(au1)} • ${roleTitle(au1)}${roleOf.get(au1.id) === 'admin' ? ' • مدیر گروه' : ''}` : 'کاربر حذف‌شده',
-      avatar: au1 ? <UserAvatar user={au1} size={34} /> : undefined, body: p.body, at: p.createdAt, edited: !!p.editedAt, pinned: p.pinned, files: files.filter((f) => f.ownerId === p.id), canRemoveFiles: canDel, menu,
+      id: p.id, kind: 'post', mine, authorName: au1 ? fullName(au1) : 'کاربر', author: au1 ? `${fullName(au1)} • ${roleTitle(au1)}${roleOf.get(au1.id) === 'admin' ? ' • مدیر گروه' : ''}` : 'کاربر حذف‌شده',
+      avatar: au1 ? <UserAvatar user={au1} size={34} /> : undefined, body: p.body, at: p.createdAt, pinned: p.pinned, files: pf, canRemoveFiles: false,
+      replyToId: p.replyToId, replySnippet: p.replySnippet, forwardedFrom: p.forwardedFrom,
+      edit: (mine || a.manager) ? { action: updatePost, body: p.body, files: pf } : undefined, menuExtra,
     };
   });
   const pinned = posts.filter((p) => p.pinned);

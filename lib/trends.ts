@@ -17,7 +17,8 @@ export function classGpaRanking(d: SchoolData, gradeLevel: string, p: { from: st
     .filter((x): x is { classId: string; name: string; avg: number; n: number } => x.avg !== null).sort((a, b) => b.avg - a.avg);
   return list.map((x) => ({ ...x, rank: 1 + list.filter((y) => y.avg > x.avg).length }));
 }
-const monthsSoFar = (d: SchoolData) => d.months.filter((m) => m.from <= d.today);
+/** محور ماه‌های نمودار: ماه‌های سال تحصیلی (مهر تا خرداد) همیشه، و تیر تا شهریور فقط پس از شروع؛ ماه‌های هنوز نیامده بدون مقدار می‌مانند */
+const monthsSoFar = (d: SchoolData) => d.months.filter((m, i) => i < 9 || m.from <= d.today);
 
 /** روند ماهانه‌ی معدل: دانش‌آموز (اختیاری) در برابر میانگین کلاس و میانگین پایه */
 export function gpaTrend(d: SchoolData, o: { studentId?: string; classId: string; gradeLevel: string }) {
@@ -25,12 +26,12 @@ export function gpaTrend(d: SchoolData, o: { studentId?: string; classId: string
   const classIds = idsOf(d, (s) => s.classId === o.classId);
   const gradeClassIds = new Set(d.classes.filter((c) => c.gradeLevel === o.gradeLevel).map((c) => c.id));
   const gradeIds = idsOf(d, (s) => !!s.classId && gradeClassIds.has(s.classId));
-  const cols = ms.map((m) => { const r = within(d.rows, m); return { mine: o.studentId ? rankAll(r, [o.studentId])[0]?.avg ?? null : null, classAvg: meanOf(rankAll(r, classIds)), gradeAvg: meanOf(rankAll(r, gradeIds)) }; });
+  const cols = ms.map((m) => { if (m.from > d.today) return { mine: null, classAvg: null, gradeAvg: null }; const r = within(d.rows, m); return { mine: o.studentId ? rankAll(r, [o.studentId])[0]?.avg ?? null : null, classAvg: meanOf(rankAll(r, classIds)), gradeAvg: meanOf(rankAll(r, gradeIds)) }; });
   return { labels: ms.map((m) => m.label), mine: cols.map((c) => c.mine), classAvg: cols.map((c) => c.classAvg), gradeAvg: cols.map((c) => c.gradeAvg) };
 }
 /** روند ماهانه‌ی امتیاز انضباطی (تشویق − منفی): دانش‌آموز در برابر میانگین هر نفر در کلاس */
 export function disciplineTrend(d: SchoolData, o: { studentId?: string; classId: string }) {
   const ms = monthsSoFar(d); const classIds = idsOf(d, (s) => s.classId === o.classId);
-  const cols = ms.map((m) => { const net = netByStudent(d.notes, m); return { mine: o.studentId ? net.get(o.studentId) ?? 0 : null, classAvg: classIds.length ? Math.round((classIds.reduce((a, id) => a + (net.get(id) ?? 0), 0) / classIds.length) * 100) / 100 : null }; });
+  const cols = ms.map((m) => { if (m.from > d.today) return { mine: null, classAvg: null }; const net = netByStudent(d.notes, m); return { mine: o.studentId ? net.get(o.studentId) ?? 0 : null, classAvg: classIds.length ? Math.round((classIds.reduce((a, id) => a + (net.get(id) ?? 0), 0) / classIds.length) * 100) / 100 : null }; });
   return { labels: ms.map((m) => m.label), mine: cols.map((c) => c.mine), classAvg: cols.map((c) => c.classAvg) };
 }

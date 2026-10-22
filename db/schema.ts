@@ -281,6 +281,11 @@ export const messages = sqliteTable('messages', {
   pinnedBySender: integer('pinned_by_sender', { mode: 'boolean' }).notNull().default(false),
   pinnedByRecipient: integer('pinned_by_recipient', { mode: 'boolean' }).notNull().default(false),
   editedAt: integer('edited_at', { mode: 'timestamp' }),
+  /** پاسخ به یک پیام: شناسه + خلاصه‌ی متن (تا با حذف پیام اصلی هم نمایش داده شود) */
+  replyToId: text('reply_to_id'),
+  replySnippet: text('reply_snippet'),
+  /** «هدایت‌شده از …»؛ در هدایت بدون نام، خالی می‌ماند */
+  forwardedFrom: text('forwarded_from'),
   createdAt: createdAt(),
 }, (t) => [index('msg_recipient_idx').on(t.recipientId, t.readAt), index('msg_sender_idx').on(t.senderId)]);
 
@@ -392,6 +397,9 @@ export const chatPosts = sqliteTable('chat_posts', {
   body: text('body').notNull(),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   editedAt: integer('edited_at', { mode: 'timestamp' }),
+  replyToId: text('reply_to_id'),
+  replySnippet: text('reply_snippet'),
+  forwardedFrom: text('forwarded_from'),
   createdAt: createdAt(),
 }, (t) => [index('chat_posts_group_idx').on(t.groupId, t.createdAt)]);
 

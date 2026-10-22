@@ -91,7 +91,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       </Collapse>
 
       <div style={{ height: 16 }} />
-      <Collapse title={`نمرات و رتبه‌ی هر درس (${period.label})`} hint="رتبه در کلاس و پایه برای هر درس">
+      <Collapse title={onlyMine ? `نمرات و رتبه‌ی درس شما${scope2 ? ` (${scope2})` : ''} — ${period.label}` : `نمرات و رتبه‌ی هر درس (${period.label})`} hint={onlyMine ? 'رتبه در کلاس و پایه برای درس شما' : 'رتبه در کلاس و پایه برای هر درس'}>
         {subj.length ? <div className="table-wrap"><table><thead><tr><th>درس</th><th>نمره‌ی دانش‌آموز</th><th>نمودار</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
           {subj.map((m) => (<tr key={m.subjectId}><td><b>{m.name}</b><div className="muted small">{fa(m.count)} نمره</div></td><td><Badge tone={tone(m.avg)}>{fa(m.avg)}</Badge></td>
             <td style={{ minWidth: 110 }}><div className="cmp-bar"><span style={{ width: `${Math.min(100, (m.avg / 20) * 100)}%` }} /><b style={{ insetInlineStart: `${Math.min(100, ((m.classAvg ?? 0) / 20) * 100)}%` }} /></div></td>
@@ -104,10 +104,10 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       <div style={{ height: 16 }} />
       {showLists ? (
         <div className="stack">
-          <Collapse title={`رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات کلاس' : 'میانگین معدل کل کلاس'}: <b>{val(res.classAvg)}</b></span>}>
+          <Collapse title={onlyMine ? `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} در درس شما — ${period.label}` : `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات کلاس' : 'میانگین معدل کل کلاس'}: <b>{val(res.classAvg)}</b></span>}>
             {res.cls.length ? rankTable(res.cls, false) : <Empty text="در این بازه نمره‌ای برای کلاس ثبت نشده است." icon="grades" />}
           </Collapse>
-          <Collapse title={`رتبه‌بندی پایه‌ی ${ctx.cls?.gradeLevel ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات پایه' : 'میانگین معدل کل پایه'}: <b>{val(res.gradeAvg)}</b></span>}>
+          <Collapse title={onlyMine ? `رتبه‌بندی پایه‌ی ${ctx.cls?.gradeLevel ?? ''} در درس شما — ${period.label}` : `رتبه‌بندی پایه‌ی ${ctx.cls?.gradeLevel ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات پایه' : 'میانگین معدل کل پایه'}: <b>{val(res.gradeAvg)}</b></span>}>
             {res.grd.length ? rankTable(res.grd, true) : <Empty text="در این بازه نمره‌ای برای پایه ثبت نشده است." icon="grades" />}
           </Collapse>
         </div>

@@ -7,6 +7,7 @@ import { isManager, roleTitle } from '@/lib/permissions';
 import { fullName } from '@/lib/format';
 import { UserAvatar } from '@/components/UserAvatar';
 import ChatList from './ChatList';
+import ChatProvider, { type Target } from './ChatProvider';
 import ChatLive from './ChatLive';
 import Bubbles, { type Bubble } from './Bubbles';
 
@@ -15,12 +16,15 @@ export async function ChatShell({ activeKey, children }: { activeKey?: string; c
   const u = await requireUser();
   const [items, recips] = await Promise.all([conversationList(u), allowedRecipients(u)]);
   const people = recips.map((r) => ({ id: r.id, name: fullName(r), sub: roleTitle(r), avatar: <UserAvatar user={r} size={46} /> }));
+  const targets: Target[] = [...items.map((i) => ({ key: i.key, name: i.name, sub: i.sub, avatar: i.avatar })), ...people.filter((p) => !items.some((i) => i.key === `u:${p.id}`)).map((p) => ({ key: `u:${p.id}`, name: p.name, sub: p.sub, avatar: p.avatar }))];
   return (
+    <ChatProvider key={activeKey ?? 'none'} targets={targets}>
     <div className={`msgr${children ? ' has-thread' : ''}`}>
       <ChatList items={items} people={people} activeKey={activeKey} canManageGroups={isManager(u.role)} />
       <section className="msgr-thread">{children ?? (
         <div className="msgr-placeholder"><div style={{ fontSize: '3.4rem' }}>💬</div><b>گفتگویی را انتخاب کنید</b><span className="muted small">از فهرست کنار، یک گفتگو را باز کنید یا با «پیام جدید» برای یک نفر بنویسید.</span></div>)}</section>
     </div>
+    </ChatProvider>
   );
 }
 

@@ -59,16 +59,15 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   const nameOf = new Map(studentRows.map((r) => [r.id, `${r.firstName} ${r.lastName}`]));
   const todayReported = new Set(reports.filter((r) => r.date === today).map((r) => r.studentId));
   const todaySkip = new Set(skipRows.filter((k) => k.date === today).map((k) => k.studentId));
+  // «عدم مطالعه»: نوار فشرده‌ی بالای فرم ثبت گزارش (به‌جای کارت جدا در پایین)
   const noStudyCard = canWrite && students.length ? (
-    <Card title={isSelf ? 'امروز مطالعه نداشتی؟' : 'امروز مطالعه نداشت؟'} className="">
-      <p className="muted small" style={{ marginBottom: 10 }}>{isSelf ? 'اگر امروز اصلاً مطالعه نکرده‌ای، «عدم مطالعه» را ثبت کن تا برای مدرسه مشخص باشد. اگر بعداً مطالعه کردی، کافی است گزارش ثبت کنی؛ «عدم مطالعه» خودکار لغو می‌شود.' : 'اگر فرزندتان امروز اصلاً مطالعه نکرده، «عدم مطالعه» را ثبت کنید تا برای مدرسه مشخص باشد و یادآور هم نیاید. اگر بعداً مطالعه کرد، کافی است گزارش ثبت کنید؛ «عدم مطالعه» خودکار لغو می‌شود.'}</p>
-      <div className="list">{students.map((s) => (
-        <div className="list-item" key={s.id} style={{ flexWrap: 'wrap' }}><b>{s.name}</b>
-          {todayReported.has(s.id) ? <Badge tone="ok">امروز گزارش دارد ✓</Badge>
-            : todaySkip.has(s.id) ? (<div className="row"><Badge tone="warn">عدم مطالعه ثبت شده</Badge><form action={undoNoStudy}><input type="hidden" name="studentId" value={s.id} /><button className="btn ghost sm">لغو</button></form></div>)
-            : (<div style={{ minWidth: 220 }}><ActionForm action={declareNoStudy} submit="ثبت عدم مطالعه" small><input type="hidden" name="studentId" value={s.id} /></ActionForm></div>)}
-        </div>))}</div>
-    </Card>) : null;
+    <div className="ns-strip">{students.map((s) => (
+      <div className="ns-row" key={s.id}>
+        <span className="ns-t">{!isSelf && <b>{s.name} — </b>}{todayReported.has(s.id) ? 'امروز گزارش ثبت شده است.' : todaySkip.has(s.id) ? 'امروز «عدم مطالعه» ثبت شده است.' : isSelf ? 'امروز اصلاً مطالعه نداشتی؟' : 'امروز اصلاً مطالعه نداشت؟'}</span>
+        {todayReported.has(s.id) ? <Badge tone="ok">✓ ثبت شد</Badge>
+          : todaySkip.has(s.id) ? (<form action={undoNoStudy}><input type="hidden" name="studentId" value={s.id} /><button className="btn ghost sm">لغو عدم مطالعه</button></form>)
+          : (<ActionForm action={declareNoStudy} submit="🚫 ثبت عدم مطالعه" small inline className="row" confirm="برای امروز «عدم مطالعه» ثبت شود؟"><input type="hidden" name="studentId" value={s.id} /></ActionForm>)}
+      </div>))}</div>) : null;
   const skipShown = skipRows.filter((k) => k.date >= addDays(today, -29) && (chosen ? k.studentId === chosen : true));
   const skipCard = (!isManager(user.role) || chosen) && skipShown.length ? (
     <Card title="روزهای «عدم مطالعه» (۳۰ روز اخیر)" className=""><div className="chips">{[...skipShown].sort((a, b) => (a.date < b.date ? 1 : -1)).map((k) => <span key={k.id} className="badge warn">{formatJalali(k.date)}{students.length > 1 ? ` • ${nameOf.get(k.studentId)}` : ''}</span>)}</div></Card>) : null;
@@ -147,9 +146,9 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
 
       {filters}
       <Tabs tabs={[
-        ...(canWrite ? [{ id: 'form', label: '✏️ ثبت گزارش', content: (<div className="stack"><Card title={initial ? 'ویرایش گزارش امروز' : 'ثبت گزارش جدید'} className="">
+        ...(canWrite ? [{ id: 'form', label: '✏️ ثبت گزارش', content: (<div className="stack">{!initial && noStudyCard}<Card title={initial ? 'ویرایش گزارش امروز' : 'ثبت گزارش جدید'} className="">
           {students.length ? <StudyForm key={initial?.id ?? 'new'} initial={initial} self={isSelf} subjects={subjectOpts} students={students} windowStart={w.startMin} windowEnd={w.endMin} startLabel={w.startLabel} endLabel={w.endLabel} /> : <Empty text="هنوز فرزندی به حساب شما متصل نشده است. از مدیر یا معاون مدرسه بخواهید پیوند را ثبت کند." icon="users" />}
-        </Card>{noStudyCard}</div>) }] : []),
+        </Card></div>) }] : []),
         { id: 'progress', label: '📈 پیشرفت', content: progressView },
         { id: 'list', label: '📋 گزارش‌ها', content: listView },
         ...(noStudyView ? [{ id: 'nostudy', label: '🚫 عدم مطالعه', content: noStudyView }] : []),

@@ -92,6 +92,13 @@
       "when": 1792600000000,
       "tag": "0012_password_resets",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792700000000,
+      "tag": "0013_chat_reply_forward",
+      "breakpoints": true
     }
   ]
 }

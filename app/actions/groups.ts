@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { db } from '@/db';
 import { chatGroups, chatMembers, chatPosts, parentStudents, users } from '@/db/schema';
+import { nameOf, planAttachmentEdit, snippetOf } from '@/lib/chat-ops';
 import { audit } from '@/lib/audit';
 import { groupAccess } from '@/lib/groups';
 import { classInSchool, schoolOf } from '@/lib/permissions';
@@ -108,7 +109,9 @@ export async function postToGroup(_: ActionState, fd: FormData): Promise<ActionS
     const body = String(fd.get('body') ?? '').trim();
     const up = await readUploads(fd); if (!up.ok) return fail(up.error);
     if (body.length < 1 && !up.files.length) return fail('متن یا فایل بگذارید.'); if (body.length > 4000) return fail('متن بیش از ۴۰۰۰ نویسه است.');
-    const [p] = await db.insert(chatPosts).values({ groupId: gid, authorId: u.id, body }).returning({ id: chatPosts.id });
+    let replyToId: string | null = null; let replySnippet: string | null = null; const rid = String(fd.get('replyToId') ?? '');
+    if (rid) { const [r] = await db.select().from(chatPosts).where(eq(chatPosts.id, rid)).limit(1); if (r && r.groupId === gid) { replyToId = r.id; replySnippet = snippetOf(await nameOf(r.authorId), r.body, (await listAttachments('group_post', [r.id])).length > 0); } }
+    const [p] = await db.insert(chatPosts).values({ groupId: gid, authorId: u.id, body, replyToId, replySnippet }).returning({ id: chatPosts.id });
     await saveAttachments('group_post', p.id, u.id, up.files);
     bump(gid); return success('ارسال شد.');
   });
@@ -118,7 +121,10 @@ export async function updatePost(_: ActionState, fd: FormData): Promise<ActionSt
   return run([...ALL], async (u) => {
     const [p] = await db.select().from(chatPosts).where(eq(chatPosts.id, String(fd.get('id') ?? ''))).limit(1); if (!p) return fail('پیدا نشد.');
     const a = await groupAccess(u, p.groupId); if (!a || !(p.authorId === u.id || a.manager)) return fail('اجازه ندارید.');
-    const body = String(fd.get('body') ?? '').trim(); if (!body || body.length > 4000) return fail('متن نامعتبر است.');
+    const body = String(fd.get('body') ?? '').trim(); if (body.length > 4000) return fail('متن بیش از ۴۰۰۰ نویسه است.');
+    const plan = await planAttachmentEdit('group_post', p.id, fd); if (!plan.ok) return fail(plan.error);
+    if (!body && plan.total === 0) return fail('پیام نمی‌تواند خالی باشد.');
+    await plan.apply(u.id);
     await db.update(chatPosts).set({ body, editedAt: new Date() }).where(eq(chatPosts.id, p.id)); bump(p.groupId); return success('ذخیره شد.');
   });
 }
