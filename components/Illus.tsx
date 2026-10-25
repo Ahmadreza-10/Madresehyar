@@ -3,13 +3,13 @@ import { useId, type ReactNode } from 'react';
 /** تصویرسازی‌های اورجینال سایت (SVG): هر بخش یک تصویر رنگی دارد. بدون وابستگی به اینترنت. */
 export type IllusName =
   | 'grades' | 'report' | 'attendance' | 'messages' | 'schedule' | 'assignments' | 'study' | 'discipline'
-  | 'announcements' | 'students' | 'users' | 'school' | 'settings' | 'log' | 'note' | 'empty' | 'advisor' | 'teacher' | 'help';
+  | 'announcements' | 'students' | 'users' | 'school' | 'settings' | 'log' | 'note' | 'empty' | 'advisor' | 'teacher' | 'help' | 'survey';
 
 /** رنگ شاخص هر بخش (برای کاشی‌ها، آیکن منو و سربرگ صفحه) */
 export const ACCENT: Record<IllusName, string> = {
   grades: '#3b82f6', report: '#6366f1', attendance: '#f97316', messages: '#14b8a6', schedule: '#a855f7', assignments: '#ec4899',
   study: '#22c55e', discipline: '#eab308', announcements: '#ef4444', students: '#0ea5e9', users: '#64748b', school: '#84cc16',
-  settings: '#6b7280', log: '#d97706', note: '#eab308', empty: '#94a3b8', advisor: '#8b5cf6', teacher: '#10b981', help: '#0891b2',
+  settings: '#6b7280', log: '#d97706', note: '#eab308', empty: '#94a3b8', advisor: '#8b5cf6', teacher: '#10b981', help: '#0891b2', survey: '#ec4899',
 };
 
 const g = (id: string, a: string, b: string) => (
@@ -126,6 +126,14 @@ const makeArt = (P: string): Record<IllusName, ReactNode> => ({
     <g transform="rotate(-6 50 50)"><rect x="16" y="12" width="68" height="72" rx="8" fill="#fde047" /><path d="M84 62 V76 A8 8 0 0 1 76 84 H62 Z" fill="#facc15" />
       {[28, 40, 52].map((y) => <rect key={y} x="26" y={y} width={y === 52 ? 24 : 44} height="4.5" rx="2.2" fill="#ca8a04" opacity=".55" />)}</g>
     <circle cx="50" cy="12" r="6" fill="#ef4444" stroke="#fff" strokeWidth="2" />
+  </>),
+  survey: (<>
+    <defs>{g(`${P}-ig-sv`, '#f472b6', '#be185d')}{g(`${P}-ig-sv2`, '#fde68a', '#f59e0b')}</defs><Shadow />
+    <path d="M24 14 H76 a14 14 0 0 1 14 14 V50 a14 14 0 0 1 -14 14 H46 L28 80 V64 H24 a14 14 0 0 1 -14 -14 V28 a14 14 0 0 1 14 -14z" fill={`url(#${P}-ig-sv)`} />
+    {[24, 37, 50, 63, 76].map((cx, i) => (<polygon key={cx} points={star(cx, 33, 7, 3.2)} fill={i < 4 ? '#fde047' : '#fff'} opacity={i < 4 ? 1 : .55} />))}
+    <rect x="22" y="47" width="42" height="4" rx="2" fill="#fff" opacity=".85" /><rect x="22" y="55" width="28" height="3.5" rx="1.8" fill="#fff" opacity=".55" />
+    <circle cx="76" cy="72" r="14" fill={`url(#${P}-ig-sv2)`} stroke="#fff" strokeWidth="2.5" />
+    <circle cx="71" cy="69" r="1.9" fill="#7c2d12" /><circle cx="81" cy="69" r="1.9" fill="#7c2d12" /><path d="M69 75 q7 7.5 14 0" stroke="#7c2d12" strokeWidth="2.2" fill="none" strokeLinecap="round" />
   </>),
   advisor: (<>
     <defs>{g(`${P}-ig-v`, '#fde68a', '#f59e0b')}{g(`${P}-ig-v2`, '#a78bfa', '#6d28d9')}</defs><Shadow />

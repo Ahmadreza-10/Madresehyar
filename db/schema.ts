@@ -70,6 +70,27 @@ export const classSubjects = sqliteTable('class_subjects', {
   teacherId: text('teacher_id').references(() => users.id, { onDelete: 'set null' }),
 }, (t) => [uniqueIndex('class_subject_uq').on(t.classId, t.subjectId)]);
 
+/** نظرسنجی از معلم‌ها: هر دانش‌آموز برای هر «معلم + درس» در هر سال تحصیلی یک نظر (قابل ویرایش) دارد.
+ *  نظرها در همه‌جا ناشناس نمایش داده می‌شوند؛ studentId فقط برای جلوگیری از ثبت تکراری ذخیره می‌شود. */
+export const teacherReviews = sqliteTable('teacher_reviews', {
+  id: id(),
+  schoolId: text('school_id').notNull().references(() => schools.id, { onDelete: 'cascade' }),
+  teacherId: text('teacher_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  studentId: text('student_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  subjectId: text('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
+  academicYear: text('academic_year').notNull(),
+  /** امتیازها از ۱ تا ۵ */
+  overall: integer('overall').notNull(),
+  teaching: integer('teaching').notNull(),
+  mastery: integer('mastery').notNull(),
+  behavior: integer('behavior').notNull(),
+  comment: text('comment'),
+  /** مدیر/معاون می‌تواند یک نظرِ نامناسب را پنهان کند */
+  hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+}, (t) => [uniqueIndex('teacher_review_uq').on(t.studentId, t.teacherId, t.subjectId, t.academicYear), index('teacher_review_teacher_idx').on(t.teacherId, t.academicYear)]);
+
 export const parentStudents = sqliteTable('parent_students', {
   parentId: text('parent_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   studentId: text('student_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -130,6 +151,8 @@ export const studentNotes = sqliteTable('student_notes', {
   studentId: text('student_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   type: text('type', { enum: NOTE_TYPES }).notNull().default('note'),
   body: text('body').notNull(),
+  /** تعداد: یک یادداشت می‌تواند چند تشویق یا چند منفی با هم باشد (مثلاً ۲۰ مثبت) */
+  count: integer('count').notNull().default(1),
   date: text('date').notNull(),
   authorId: text('author_id').references(() => users.id, { onDelete: 'set null' }),
   editedAt: integer('edited_at', { mode: 'timestamp' }),

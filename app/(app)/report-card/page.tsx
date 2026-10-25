@@ -55,7 +55,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
   const clsOf = new Map(ctx.gradeStudents.map((s) => [s.id, s.classId]));
   const href = (o: { student?: string; p?: string }) => { const q = new URLSearchParams(); const s = o.student ?? st.id; q.set('student', s); const p = o.p ?? period.key; if (p !== 'year') q.set('p', p); return `/report-card?${q}`; };
   const rankTable = (rows: Ranked[], withClass: boolean) => (
-    <div className="table-wrap"><table><thead><tr><th>رتبه</th><th>نام</th>{withClass && <th>کلاس</th>}<th>{onlyMine ? 'میانگین درس' : 'معدل کل'}</th></tr></thead><tbody>
+    <div className="table-wrap rc-tw"><table><thead><tr><th>رتبه</th><th>نام</th>{withClass && <th>کلاس</th>}<th>{onlyMine ? 'میانگین درس' : 'معدل کل'}</th></tr></thead><tbody>
       {rows.map((x) => (<tr key={x.studentId} className={x.studentId === st.id ? 'me-row' : ''}><td className="num"><b>{fa(x.rank)}</b></td><td>{nameOf.get(x.studentId)}{x.studentId === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(x.studentId) ?? '') ?? '—'}</td>}<td className="num">{fa(x.avg)}</td></tr>))}
     </tbody></table></div>
   );
@@ -72,7 +72,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
         <PrintButton />
       </PageHead>
 
-      <div className="grid g4">
+      <div className="grid g4 rc-stats">
         <Card><div className="muted small">{avgWord} ({period.label})</div><div className="big-num num">{val(res.myClass?.avg)}</div>{res.myClass && <Badge tone={tone(res.myClass.avg)}>{gradeLabel(res.myClass.avg)}</Badge>}</Card>
         <Card><div className="muted small">رتبه در کلاس</div><div className="big-num num">{val(res.myClass?.rank)}</div><span className="muted small">از {fa(res.cls.length)} نفر • میانگین معدل کلاس: {val(res.classAvg)}</span></Card>
         <Card><div className="muted small">رتبه در پایه ({ctx.cls?.gradeLevel ?? '—'})</div><div className="big-num num">{val(res.myGrade?.rank)}</div><span className="muted small">از {fa(res.grd.length)} نفر • میانگین معدل پایه: {val(res.gradeAvg)}</span></Card>
@@ -81,7 +81,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
 
       <div style={{ height: 16 }} />
       <Collapse title={onlyMine ? 'میانگین و رتبه‌ی درس شما، ماه‌به‌ماه و کل سال' : 'معدل و رتبه‌ی ماه‌به‌ماه و کل سال'} hint="برای دیدن یک ماه، روی نام آن بزنید">
-        {shownMonths.length ? <div className="table-wrap"><table><thead><tr><th>بازه</th><th>{onlyMine ? 'میانگین' : 'معدل'}</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
+        {shownMonths.length ? <div className="table-wrap rc-tw"><table><thead><tr><th>بازه</th><th>{onlyMine ? 'میانگین' : 'معدل'}</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
           {[...shownMonths.map(({ m, r }) => ({ key: m.key, label: m.label, r })), { key: 'year', label: 'کل سال', r: yearRes }].map(({ key, label, r }) => (
             <tr key={key} className={key === period.key ? 'me-row' : ''} style={key === 'year' ? { fontWeight: 800 } : undefined}>
               <td><Link href={href({ p: key })}>{label}</Link></td><td className="num">{val(r.myClass?.avg)}</td>
@@ -92,7 +92,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
 
       <div style={{ height: 16 }} />
       <Collapse title={onlyMine ? `نمرات و رتبه‌ی درس شما${scope2 ? ` (${scope2})` : ''} — ${period.label}` : `نمرات و رتبه‌ی هر درس (${period.label})`} hint={onlyMine ? 'رتبه در کلاس و پایه برای درس شما' : 'رتبه در کلاس و پایه برای هر درس'}>
-        {subj.length ? <div className="table-wrap"><table><thead><tr><th>درس</th><th>نمره‌ی دانش‌آموز</th><th>نمودار</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
+        {subj.length ? <div className="table-wrap rc-tw"><table><thead><tr><th>درس</th><th>نمره‌ی دانش‌آموز</th><th>نمودار</th><th>رتبه در کلاس</th><th>میانگین کلاس</th><th>رتبه در پایه</th><th>میانگین پایه</th></tr></thead><tbody>
           {subj.map((m) => (<tr key={m.subjectId}><td><b>{m.name}</b><div className="muted small">{fa(m.count)} نمره</div></td><td><Badge tone={tone(m.avg)}>{fa(m.avg)}</Badge></td>
             <td style={{ minWidth: 110 }}><div className="cmp-bar"><span style={{ width: `${Math.min(100, (m.avg / 20) * 100)}%` }} /><b style={{ insetInlineStart: `${Math.min(100, ((m.classAvg ?? 0) / 20) * 100)}%` }} /></div></td>
             <td className="num">{m.classRank ? `${fa(m.classRank)} از ${fa(m.classN)}` : '—'}</td><td className="num">{val(m.classAvg)}</td>

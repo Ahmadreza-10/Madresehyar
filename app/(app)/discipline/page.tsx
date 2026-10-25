@@ -4,9 +4,11 @@ import { studentNotes, users } from '@/db/schema';
 import { addNote } from '@/app/actions/school';
 import { updateNote } from '@/app/actions/edit';
 import { requireSchoolUser } from '@/lib/auth';
-import { isManager, isStaff, focusStudentIds } from '@/lib/permissions';
+import { isManager, isStaff, focusStudentIds, roleTitle } from '@/lib/permissions';
+import NoteCount from '@/components/NoteCount';
+import NoteTally from '@/components/NoteTally';
 import { loadRankContext } from '@/lib/ranking';
-import { classDiscipline, netByStudent, rankNet } from '@/lib/discipline-calc';
+import { classDiscipline, netByStudent, rankNet, tally } from '@/lib/discipline-calc';
 import { disciplineTrend } from '@/lib/trends';
 import { fa, formatJalali, fullName } from '@/lib/format';
 import ActionForm from '@/components/ActionForm';
@@ -37,8 +39,11 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
   const trend = ctx.cls ? disciplineTrend(d, { studentId: st.id, classId: ctx.cls.id }) : { labels: [], mine: [], classAvg: [] };
 
   const notes = await db.select().from(studentNotes).where(eq(studentNotes.studentId, st.id)).orderBy(desc(studentNotes.date), desc(studentNotes.createdAt)).limit(60);
+  const authorIds = [...new Set(notes.map((n) => n.authorId).filter((x): x is string => !!x))];
+  const authorOf = new Map((authorIds.length ? await db.select().from(users).where(inArray(users.id, authorIds)) : []).map((a) => [a.id, `${fullName(a)} (${roleTitle(a)})`]));
   const inPeriod = notes.filter((n) => n.date >= period.from && n.date <= period.to);
-  const praise = inPeriod.filter((n) => n.type === 'praise').length; const disc = inPeriod.filter((n) => n.type === 'discipline').length;
+  // جمع کل مثبت و منفی همین بازه از همه‌ی یادداشت‌ها (نه فقط ۶۰ مورد آخر) و باقی‌مانده
+  const sum = tally(d.notes.filter((n) => n.studentId === st.id && n.date >= period.from && n.date <= period.to));
 
   // نفرات برتر «پایه‌ی» این دانش‌آموز (برای معلم/معاون/مدیر): بر اساس معدل و بر اساس انضباط
   const nm = new Map(d.students.map((s) => [s.id, fullName(s)])); const clsName = new Map(d.classes.map((c) => [c.id, c.name]));
@@ -50,15 +55,16 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
 
   const tabs = [
     { id: 'notes', label: '📝 مثبت‌ها و منفی‌ها', badge: inPeriod.length ? <Badge tone="primary">{fa(inPeriod.length)}</Badge> : undefined, content: (
+      <div className="stack"><NoteTally praise={sum.praise} negative={sum.negative} label={`مثبت‌ها و منفی‌ها — ${period.label}`} />
       <Card title={`یادداشت‌های ثبت‌شده (${period.label})`}>
         {staff && (<div style={{ marginBottom: 14 }}><ActionForm action={addNote} submit="ثبت یادداشت" small><input type="hidden" name="studentId" value={st.id} />
-          <div className="inline-fields"><select name="type" defaultValue="praise"><option value="praise">تشویق (+۱)</option><option value="discipline">انضباطی / منفی (−۱)</option><option value="note">یادداشت ساده</option></select></div><textarea name="body" required maxLength={500} placeholder="متن…" style={{ minHeight: 64 }} /></ActionForm></div>)}
-        {inPeriod.length ? <div className="list">{inPeriod.map((n) => <div className="list-item" key={n.id} style={{ alignItems: 'flex-start' }}><div className="small">{n.body}<div className="muted">{formatJalali(n.date)}{n.editedAt && <span className="edited"> • ویرایش‌شده</span>}</div>
+          <div className="inline-fields"><select name="type" defaultValue="praise"><option value="praise">تشویق (+۱)</option><option value="discipline">انضباطی / منفی (−۱)</option><option value="note">یادداشت ساده</option></select></div><NoteCount /><textarea name="body" required maxLength={500} placeholder="متن…" style={{ minHeight: 64 }} /></ActionForm></div>)}
+        {inPeriod.length ? <div className="list">{inPeriod.map((n) => <div className="list-item" key={n.id} style={{ alignItems: 'flex-start' }}><div className="small">{n.body}<div className="muted">{formatJalali(n.date)}{n.authorId && authorOf.get(n.authorId) && <> • ثبت‌کننده: <b>{authorOf.get(n.authorId)}</b></>}{n.editedAt && <span className="edited"> • ویرایش‌شده</span>}</div>
           {staff && (isManager(u.role) || n.authorId === u.id) && (<details style={{ marginTop: 6 }}><summary className="btn ghost sm" style={{ display: 'inline-flex' }}>ویرایش</summary>
             <div style={{ marginTop: 8, minWidth: 260 }}><ActionForm action={updateNote} submit="ذخیره" resetOnSuccess={false} small><input type="hidden" name="id" value={n.id} />
               <select name="type" defaultValue={n.type}><option value="praise">تشویق (+۱)</option><option value="discipline">انضباطی / منفی (−۱)</option><option value="note">یادداشت ساده</option></select>
-              <textarea name="body" defaultValue={n.body} required maxLength={500} style={{ minHeight: 64 }} /></ActionForm></div></details>)}</div><Badge tone={noteTone[n.type]}>{noteLabel[n.type]}</Badge></div>)}</div> : <Empty text="در این بازه یادداشتی ثبت نشده است." icon="note" />}
-      </Card>) },
+              <NoteCount defaultValue={n.count} /><textarea name="body" defaultValue={n.body} required maxLength={500} style={{ minHeight: 64 }} /></ActionForm></div></details>)}</div><Badge tone={noteTone[n.type]}>{noteLabel[n.type]}{n.type !== 'note' && n.count > 1 ? ` ×${fa(n.count)}` : ''}</Badge></div>)}</div> : <Empty text="در این بازه یادداشتی ثبت نشده است." icon="note" />}
+      </Card></div>) },
     { id: 'best', label: '🏆 بهترین کلاس', content: (
       <Card title="بهترین کلاس از نظر انضباط" action={best ? <Badge tone="ok">🏆 {best.name}</Badge> : undefined}>
         {clsRank.length ? <div className="table-wrap"><table><thead><tr><th>رتبه</th><th>کلاس</th><th>تشویق</th><th>منفی</th><th>میانگین هر نفر</th></tr></thead><tbody>
@@ -89,7 +95,8 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
           <div className="rank-strip">
             <div><span>رتبه در کلاس</span><b className="num">{of(dc.cls?.rank, dc.cls?.of ?? 0)}</b></div>
             <div><span>رتبه در پایه</span><b className="num">{of(dc.grd?.rank, dc.grd?.of ?? 0)}</b></div>
-            <div><span>تشویق / منفی</span><b className="num">{fa(praise)} / {fa(disc)}</b></div>
+            <div><span>تشویق / منفی</span><b className="num">{fa(sum.praise)} / {fa(sum.negative)}</b></div>
+            <div><span>باقی‌مانده</span><b className="num">{sum.left > 0 ? `${fa(sum.left)} مثبت` : sum.left < 0 ? `${fa(-sum.left)} منفی` : 'صفر'}</b></div>
           </div>
         </section>
       </div>

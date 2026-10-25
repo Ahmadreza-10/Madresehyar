@@ -19,8 +19,8 @@ export async function profileStats(u: CurrentUser): Promise<{ stats: ProfileStat
     const handled = new Set(st.filter((x) => x.doneDate || x.penaltyNoteId).map((x) => x.assignmentId));
     const today = todayTehran(); const now = minutesNowTehran();
     const open = asg.filter((a) => !handled.has(a.id) && (!a.dueDate || !dueInfo(a.dueDate, a.dueTime, today, now).over)).length;
-    const notes = await db.select({ t: studentNotes.type }).from(studentNotes).where(eq(studentNotes.studentId, u.id));
-    const net = notes.filter((n) => n.t === 'praise').length - notes.filter((n) => n.t === 'discipline').length;
+    const notes = await db.select({ t: studentNotes.type, c: studentNotes.count }).from(studentNotes).where(eq(studentNotes.studentId, u.id));
+    const net = notes.filter((n) => n.t === 'praise').reduce((a, n) => a + n.c, 0) - notes.filter((n) => n.t === 'discipline').reduce((a, n) => a + n.c, 0);
     const [{ abs }] = await db.select({ abs: count() }).from(attendance).where(eq(attendance.studentId, u.id));
     return { subtitle: cls ? [cls.name] : [], stats: [
       { label: 'کلاس', value: cls?.name ?? '—', icon: 'school', tone: 'primary' },

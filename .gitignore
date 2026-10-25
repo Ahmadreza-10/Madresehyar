@@ -1,10 +1,6 @@
-node_modules/
-.next/
+node_modules
+.next
 data/*.db
 data/*.db-*
 .env
-.env.*
-!.env.example
 *.tsbuildinfo
-.env.local
-.env.*.local

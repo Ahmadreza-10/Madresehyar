@@ -35,13 +35,13 @@ describe('تست و مدت', () => {
 describe('اعتبارسنجی گزارش چنددرسی', () => {
   const item = (o: object = {}) => ({ subjectId: 's1', studyMin: 30, testMin: 30, topic: 'درجه دوم', ...o });
   const base = (items: object[]) => ({ startTime: '18:00', endTime: '21:00', items });
-  const t = (blank: number) => ({ source: 'گاج', totalCount: 30, correctCount: 20, wrongCount: 5, blankCount: blank });
+  const t = (blank: number, dur = 30) => ({ source: 'گاج', totalCount: 30, correctCount: 20, wrongCount: 5, blankCount: blank, durationMin: dur });
   it('جمع تست‌ها باید برابر کل باشد', () => {
     expect(studyReportSchema.safeParse(base([item({ tests: [t(4)] })])).success).toBe(false);
     expect(studyReportSchema.safeParse(base([item({ tests: [t(5)] })])).success).toBe(true);
   });
   it('یک گزارش با دو درس و زمان‌های جدا', () => {
-    const r = studyReportSchema.safeParse(base([item({ studyMin: 30, testMin: 30 }), item({ subjectId: 's2', topic: 'آرایه‌ها', studyMin: 60, testMin: 60 })]));
+    const r = studyReportSchema.safeParse(base([item({ studyMin: 30, tests: [t(5, 30)] }), item({ subjectId: 's2', topic: 'آرایه‌ها', studyMin: 60, tests: [t(5, 60)] })]));
     expect(r.success).toBe(true);
     if (r.success) expect(totalMinutes(r.data.items)).toBe(180);
   });
@@ -103,7 +103,7 @@ describe('رتبه‌ی هر درس', () => {
   });
 });
 
-import { netByStudent, rankNet, classDiscipline } from '@/lib/discipline-calc';
+import { netByStudent, rankNet, classDiscipline, tally } from '@/lib/discipline-calc';
 describe('انضباط', () => {
   const n = (s: string, type: 'praise' | 'discipline' | 'note', date: string) => ({ studentId: s, type, date });
   const notes = [n('a', 'praise', '2026-10-01'), n('a', 'praise', '2026-10-02'), n('b', 'discipline', '2026-10-03'), n('c', 'note', '2026-10-03'), n('d', 'praise', '2026-11-30')];
@@ -133,12 +133,25 @@ describe('روندها و بهترین کلاس', () => {
   it('بهترین کلاس پایه (فقط کلاس‌های همان پایه)', () => {
     const r = classGpaRanking(d, 'دهم', d.year); expect(r.map((x) => x.classId)).toEqual(['B', 'A']); expect(r[0].avg).toBe(18.5); expect(r[1].avg).toBe(14.5); expect(r[1].rank).toBe(2);
   });
-  it('روند معدل: افت و بهبود ماه‌به‌ماه تا امروز', () => {
+  it('روند معدل: محور همه‌ی ماه‌های سال تحصیلی؛ ماه‌های نیامده بدون مقدار', () => {
     const t = gpaTrend(d, { studentId: 'a1', classId: 'A', gradeLevel: 'دهم' });
-    expect(t.labels).toEqual(['مهر', 'آبان']); expect(t.mine).toEqual([18, 12]); expect(t.classAvg).toEqual([16, 12]); expect(t.gradeAvg).toEqual([17, 15]);
+    expect(t.labels.slice(0, 2)).toEqual(['مهر', 'آبان']); expect(t.labels).toHaveLength(9);
+    expect(t.mine.slice(0, 2)).toEqual([18, 12]); expect(t.classAvg.slice(0, 2)).toEqual([16, 12]); expect(t.gradeAvg.slice(0, 2)).toEqual([17, 15]);
+    expect(t.mine.slice(2).every((v) => v === null)).toBe(true);
   });
   it('روند انضباط', () => {
-    const t = disciplineTrend(d, { studentId: 'a1', classId: 'A' }); expect(t.mine).toEqual([1, -1]); expect(t.classAvg).toEqual([0.5, -1]);
+    const t = disciplineTrend(d, { studentId: 'a1', classId: 'A' }); expect(t.mine.slice(0, 2)).toEqual([1, -1]); expect(t.classAvg.slice(0, 2)).toEqual([0.5, -1]);
+    expect(t.mine.slice(2).every((v) => v === null)).toBe(true);
+  });
+  it('جمع مثبت و منفی و باقی‌مانده: هر منفی یک مثبت را پاک می‌کند', () => {
+    const t = tally([{ type: 'praise', count: 20 }, { type: 'discipline', count: 10 }, { type: 'note' }, { type: 'praise' }]);
+    expect(t).toEqual({ praise: 21, negative: 10, left: 11 });
+    expect(tally([{ type: 'praise', count: 2 }, { type: 'discipline', count: 5 }]).left).toBe(-3);
+    expect(tally([]).left).toBe(0);
+  });
+  it('تعداد مثبت/منفی: هر یادداشت با تعدادش حساب می‌شود', () => {
+    const notes = [{ studentId: 'x', type: 'praise' as const, date: '2026-10-01', count: 20 }, { studentId: 'x', type: 'discipline' as const, date: '2026-10-02', count: 10 }, { studentId: 'x', type: 'praise' as const, date: '2026-10-03' }];
+    expect(netByStudent(notes, { from: '2026-10-01', to: '2026-10-31' }).get('x')).toBe(11);
   });
 });
 

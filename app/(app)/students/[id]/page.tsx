@@ -6,7 +6,10 @@ import { attendance, classes, grades, parentStudents, studentNotes, subjects, us
 import { addNote, deleteGrade } from '@/app/actions/school';
 import { requireSchoolUser } from '@/lib/auth';
 import { currentMonthPeriod, loadRankContext, resultFor } from '@/lib/ranking';
-import { canAccessStudent, isManager, isStaff, teacherSubjectIds } from '@/lib/permissions';
+import { canAccessStudent, isManager, isStaff, roleTitle, teacherSubjectIds } from '@/lib/permissions';
+import NoteCount from '@/components/NoteCount';
+import NoteTally from '@/components/NoteTally';
+import { tally } from '@/lib/discipline-calc';
 import { attendanceLabels, gradeTypeLabels } from '@/lib/school-data';
 import { flattenItems, loadReports } from '@/lib/study-data';
 import { summarize } from '@/lib/study-stats';
@@ -39,7 +42,10 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
   const parents = isManager(u.role) ? await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName, phone: users.phone }).from(parentStudents).innerJoin(users, eq(users.id, parentStudents.parentId)).where(eq(parentStudents.studentId, id)) : [];
   const ctx = await loadRankContext(id, mySubjects);
   const yr = ctx ? resultFor(ctx, ctx.year) : null; const cmPeriod = ctx ? currentMonthPeriod(ctx) : undefined; const cm = ctx && cmPeriod ? resultFor(ctx, cmPeriod) : null;
-  const praise = notes.filter((n) => n.type === 'praise').length; const disc = notes.filter((n) => n.type === 'discipline').length;
+  // جمع کل مثبت و منفی از همه‌ی یادداشت‌ها (نه فقط ۱۵ مورد آخر)
+  const sum = tally(await db.select({ type: studentNotes.type, count: studentNotes.count }).from(studentNotes).where(eq(studentNotes.studentId, id)));
+  const authorIds = [...new Set(notes.map((n) => n.authorId).filter((x): x is string => !!x))];
+  const authorOf = new Map((authorIds.length ? await db.select().from(users).where(inArray(users.id, authorIds)) : []).map((a) => [a.id, `${fullName(a)} (${roleTitle(a)})`]));
   const rk = (r: { rank: number } | null | undefined, n: number | undefined) => (r ? `${fa(r.rank)} از ${fa(n ?? 0)}` : '—');
   const avg = gr.length ? Math.round((gr.reduce((a, r) => a + (r.g.score / r.g.maxScore) * 20, 0) / gr.length) * 100) / 100 : null;
 
@@ -63,11 +69,11 @@ export default async function StudentProfile({ params }: { params: Promise<{ id:
             {cmPeriod && <div><span>رتبه در کلاس ({cmPeriod.label})</span><b className="num">{rk(cm?.myClass, cm?.cls.length)}</b></div>}
             {cmPeriod && <div><span>رتبه در پایه ({cmPeriod.label})</span><b className="num">{rk(cm?.myGrade, cm?.grd.length)}</b></div>}
             <div><span>{onlyMine ? 'میانگین درس شما (کل سال)' : 'معدل کل سال'}</span><b className="num">{yr?.myClass ? fa(yr.myClass.avg) : '—'}</b></div>
-            <div><span>تشویق / انضباطی</span><b className="num">{fa(praise)} / {fa(disc)}</b></div>
           </div>
+          <NoteTally praise={sum.praise} negative={sum.negative} label="مثبت‌ها و منفی‌ها (کل سال)" />
           {staff && (<ActionForm action={addNote} submit="ثبت یادداشت" small><input type="hidden" name="studentId" value={id} />
-            <div className="inline-fields"><select name="type" defaultValue="note"><option value="note">یادداشت</option><option value="praise">تشویق</option><option value="discipline">انضباطی</option></select></div><textarea name="body" required maxLength={500} placeholder="متن یادداشت…" style={{ minHeight: 64 }} /></ActionForm>)}
-          {notes.length ? <div className="list" style={{ marginTop: 12 }}>{notes.map((n) => <div className="list-item" key={n.id} style={{ alignItems: 'flex-start' }}><div className="small">{n.body}<div className="muted">{formatJalali(n.date)}</div></div><Badge tone={noteTone[n.type]}>{noteLabel[n.type]}</Badge></div>)}</div> : !staff && <Empty text="یادداشتی ثبت نشده است." icon="note" />}
+            <div className="inline-fields"><select name="type" defaultValue="note"><option value="note">یادداشت</option><option value="praise">تشویق</option><option value="discipline">انضباطی</option></select></div><NoteCount /><textarea name="body" required maxLength={500} placeholder="متن یادداشت…" style={{ minHeight: 64 }} /></ActionForm>)}
+          {notes.length ? <div className="list" style={{ marginTop: 12 }}>{notes.map((n) => <div className="list-item" key={n.id} style={{ alignItems: 'flex-start' }}><div className="small">{n.body}<div className="muted">{formatJalali(n.date)}{n.authorId && authorOf.get(n.authorId) && <> • ثبت‌کننده: <b>{authorOf.get(n.authorId)}</b></>}</div></div><Badge tone={noteTone[n.type]}>{noteLabel[n.type]}{n.type !== 'note' && n.count > 1 ? ` ×${fa(n.count)}` : ''}</Badge></div>)}</div> : !staff && <Empty text="یادداشتی ثبت نشده است." icon="note" />}
         </Card>
       </div>
       <div className="grid g2" style={{ marginTop: 16 }}>

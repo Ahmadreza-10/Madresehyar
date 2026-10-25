@@ -1,0 +1,1 @@
+ALTER TABLE `student_notes` ADD `count` integer DEFAULT 1 NOT NULL;

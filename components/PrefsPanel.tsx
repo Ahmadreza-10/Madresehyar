@@ -1,4 +1,5 @@
 'use client';
+import InstallApp from './InstallApp';
 import { useEffect, useState } from 'react';
 import { logoutAction } from '@/app/actions/auth';
 import { applyPrefs, COLORS, DEFAULT_PREFS, haptic, loadPrefs, PREFS_EVENT, savePrefs, type Prefs } from '@/lib/prefs';
@@ -102,15 +103,12 @@ export function NotificationsPanel() {
   );
 }
 
-type BIP = Event & { prompt: () => Promise<void> };
 /** برنامه: نصب، درباره، بازنشانی و خروج */
 export function AppPanel() {
-  const { reset } = usePrefs(); const [install, setInstall] = useState<BIP | null>(null);
-  useEffect(() => { const h = (e: Event) => { e.preventDefault(); setInstall(e as BIP); }; window.addEventListener('beforeinstallprompt', h); return () => window.removeEventListener('beforeinstallprompt', h); }, []);
+  const { reset } = usePrefs();
   return (
     <div>
-      <div className="pref-row"><span className="pref-ico" aria-hidden>📲</span><div className="pt grow"><b>نصب مدرسه‌یار</b><span className="muted small">مثل یک برنامه روی صفحه‌ی اصلی؛ سریع‌تر باز می‌شود</span></div>
-        {install ? <button type="button" className="btn sm" onClick={async () => { await install.prompt(); setInstall(null); }}>نصب</button> : <span className="muted small" style={{ maxWidth: 210, textAlign: 'end' }}>از منوی مرورگر «افزودن به صفحه‌ی اصلی» (آیفون: دکمه‌ی اشتراک‌گذاری)</span>}</div>
+      <div style={{ marginBottom: 12 }}><InstallApp /></div>
       <div className="pref-row"><span className="pref-ico" aria-hidden>↺</span><div className="pt grow"><b>بازنشانی ظاهر و اعلان‌ها</b><span className="muted small">به نمرات و تکالیف دست نمی‌زند</span></div>
         <button type="button" className="btn ghost sm" onClick={() => { if (window.confirm('تنظیمات ظاهر و اعلان‌ها به حالت اول برمی‌گردد. ادامه می‌دهید؟')) reset(); }}>بازنشانی</button></div>
       <details className="pref-row" style={{ display: 'block' }}><summary><span className="pref-ico" aria-hidden>ℹ️</span> <b>درباره‌ی مدرسه‌یار</b> <span className="muted small">• نسخه‌ی ۲٫۱</span></summary>

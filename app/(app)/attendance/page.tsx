@@ -85,7 +85,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                 <div className="radio-row">
                   {([['present', 'حاضر', 'p'], ['absent', 'غایب', 'a'], ['late', 'تأخیر', 'l'], ['excused', 'موجه', 'e']] as const).map(([v, l, c]) => (
                     <label key={v}><input type="radio" name={`status_${s.id}`} value={v} defaultChecked={cur === v} /><span className={c}>{l}</span></label>))}
-                  <input name={`note_${s.id}`} defaultValue={byStudent.get(s.id)?.note ?? ''} placeholder="توضیح" style={{ width: 160, minHeight: 34, padding: '4px 10px' }} />
+                  <input className="att-note" name={`note_${s.id}`} defaultValue={byStudent.get(s.id)?.note ?? ''} placeholder="توضیح (اختیاری)" />
                 </div>
               </div>); })}</div>
           </ActionForm>

@@ -4,6 +4,7 @@ import LoginForm from './LoginForm';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { LoginArt, LogoMark } from '@/components/Illus';
+import InstallApp from '@/components/InstallApp';
 
 export const metadata = { title: 'ورود' };
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,7 @@ export default async function LoginPage() {
             <Link href="/features" className="login-opt" style={opt('#14b8a6')}><span aria-hidden="true">✨</span>امکانات سامانه</Link>
             <Link href="/register/recover" className="login-opt" style={opt('#ec4899')}><span aria-hidden="true">🔎</span>کد پیگیری خرید را گم کرده‌ام</Link>
           </div>
+          <div style={{ marginTop: 14 }}><InstallApp compact /></div>
           <details className="login-more">
             <summary>درخواست خرید داده‌اید؟</summary>
             <div className="login-more-body"><p className="muted small">همین‌جا با <b>شماره‌ی موبایل</b> (به‌جای نام کاربری) و <b>کد پیگیری</b> (به‌جای رمز) وارد شوید تا وضعیت درخواست را ببینید.</p></div>

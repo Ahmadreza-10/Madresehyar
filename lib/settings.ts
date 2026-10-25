@@ -14,6 +14,8 @@ const DEFAULTS: Record<string, string> = {
   remindersEnabled: '1',
   /** تعداد زنگ‌های هر روز در برنامه‌ی هفتگی */
   periodsPerDay: '4',
+  /** نظرسنجی دانش‌آموزان از معلم‌ها باز است؟ */
+  teacherSurveyOpen: '1',
 };
 
 export async function getSchool(schoolId: string | null) {

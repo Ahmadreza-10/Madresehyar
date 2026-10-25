@@ -28,7 +28,7 @@ export default async function Dashboard() {
     <section className="hero">
       <UserAvatar user={u} size={88} className="hero-avatar" />
       <div><h1>سلام {u.firstName} 👋</h1><p>{sub}</p><div className="hero-chips">{unread > 0 && <Link href="/messages" className="hero-chip">✉️ {fa(unread)} پیام جدید</Link>}{chips}</div></div>
-      <Mascot size={118} />
+      <Mascot size={118} className="hero-mascot" />
     </section>
   );
   const gentle = u.role === 'PARENT' && u.schoolId ? await (async () => { const w0 = await getStudyWindow(u.schoolId!); const kids = await pendingChildren(u.id, today); return !activeSlot(minutesNowTehran(), w0.startMin, w0.endMin) && minutesNowTehran() >= w0.startMin && minutesNowTehran() < w0.endMin ? kids : []; })() : [];
@@ -83,9 +83,9 @@ export default async function Dashboard() {
   const common: T[] = [{ href: '/grades', illus: 'grades', label: 'نمرات' }, { href: '/report-card', illus: 'report', label: 'کارنامه و رتبه‌ها' }, { href: '/discipline', illus: 'discipline', label: 'مثبت‌ها و منفی‌ها' }, { href: '/attendance', illus: 'attendance', label: 'حضور و غیاب' }, { href: '/schedule', illus: 'schedule', label: 'برنامه‌ی هفتگی' }];
   const study: T = { href: '/study', illus: 'study', label: teacher ? 'مطالعه‌ی درس من' : 'گزارش مطالعه' };
   const tail: T[] = [{ href: '/messages', illus: 'messages', label: 'پیام‌ها' }, { href: '/announcements', illus: 'announcements', label: 'اطلاعیه‌ها' }, { href: '/help', illus: 'help', label: 'راهنما و پشتیبانی' }];
-  const daily: T[] = manager ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی معلمان' }, ...tail]
-    : teacher ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی من' }, ...tail]
-    : [...common, { href: '/advisor', illus: 'advisor', label: 'مشاور تحصیلی' }, { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, ...tail];
+  const daily: T[] = manager ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی معلمان' }, { href: '/surveys', illus: 'survey', label: 'نظرسنجی معلمان' }, ...tail]
+    : teacher ? [{ href: '/students', illus: 'students', label: 'دانش‌آموزان' }, ...common, { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, { href: '/teacher-schedule', illus: 'teacher', label: 'برنامه‌ی من' }, { href: '/surveys', illus: 'survey', label: 'نظرسنجی دانش‌آموزان' }, ...tail]
+    : [...common, { href: '/advisor', illus: 'advisor', label: 'مشاور تحصیلی' }, ...(u.role === 'STUDENT' ? [{ href: '/surveys', illus: 'survey', label: 'نظرسنجی معلم‌ها' } as T] : []), { href: '/assignments', illus: 'assignments', label: 'تکالیف' }, study, ...tail];
   const admin: T[] = [{ href: '/admin/users', illus: 'users', label: 'کاربران مدرسه' }, { href: '/admin/classes', illus: 'school', label: 'کلاس‌ها' }, { href: '/admin/settings', illus: 'settings', label: 'تنظیمات مدرسه' }];
 
   const tabs = [

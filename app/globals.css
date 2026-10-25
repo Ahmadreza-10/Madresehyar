@@ -102,10 +102,10 @@ input[type='time'], input[type='number'], input[dir='ltr'] { direction: ltr; tex
 .test-row { border: 1px dashed var(--border); border-radius: 14px; padding: 14px; background: var(--surface-2); display: grid; gap: 10px; }
 .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px; } .seg a { padding: 6px 14px; border-radius: 9px; color: var(--muted); font-size: .88rem; } .seg a.on { background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.1); } .seg a:hover { text-decoration: none; }
 .jdate { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 8px; }
-.radio-row { display: flex; gap: 6px; flex-wrap: wrap; } .radio-row label { position: relative; } .radio-row input { position: absolute; opacity: 0; inset: 0; min-height: 0; cursor: pointer; }
+.radio-row { display: flex; gap: 6px; flex-wrap: wrap; } .radio-row label { position: relative; } .radio-row label input { position: absolute; opacity: 0; inset: 0; min-height: 0; cursor: pointer; }
 .radio-row span { display: inline-block; padding: 5px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: .84rem; background: var(--surface); }
-.radio-row input:checked + span.p { background: var(--ok-50); border-color: var(--ok); color: var(--ok); font-weight: 700; } .radio-row input:checked + span.a { background: var(--danger-50); border-color: var(--danger); color: var(--danger); font-weight: 700; }
-.radio-row input:checked + span.l { background: var(--warn-50); border-color: var(--warn); color: var(--warn); font-weight: 700; } .radio-row input:checked + span.e { background: var(--primary-50); border-color: var(--primary); color: var(--primary); font-weight: 700; }
+.radio-row label input:checked + span.p { background: var(--ok-50); border-color: var(--ok); color: var(--ok); font-weight: 700; } .radio-row label input:checked + span.a { background: var(--danger-50); border-color: var(--danger); color: var(--danger); font-weight: 700; }
+.radio-row label input:checked + span.l { background: var(--warn-50); border-color: var(--warn); color: var(--warn); font-weight: 700; } .radio-row label input:checked + span.e { background: var(--primary-50); border-color: var(--primary); color: var(--primary); font-weight: 700; }
 
 /* ---------- Study ---------- */
 .window-banner { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 14px; border: 1px solid; margin-bottom: 18px; }
@@ -906,3 +906,78 @@ input, select, textarea { min-height: 48px; font-size: 1rem; }
 .lc-delta small { font-weight: 500; opacity: .85; }
 .lc-note { margin-top: 10px; font-size: .88rem; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
 .lc-table { margin-top: 14px; } .lc-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-end: 6px; vertical-align: middle; }
+
+/* ===== نصب برنامه (PWA) ===== */
+.install-app { display: grid; gap: 8px; }
+.install-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; font: inherit; color: inherit; cursor: pointer; padding: 12px 14px; border-radius: 16px; border: 2px solid color-mix(in srgb, var(--primary) 50%, transparent); background: color-mix(in srgb, var(--primary) 10%, var(--surface)); transition: transform .15s, box-shadow .15s; }
+.install-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 25%, transparent); }
+.install-btn > span:first-child { font-size: 1.7rem; line-height: 1; } .install-btn span span, .install-btn b { display: block; } .install-btn small { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; }
+.install-app.compact .install-btn { padding: 10px 12px; } .install-app.compact .install-btn > span:first-child { font-size: 1.4rem; }
+.install-help { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; font-size: .88rem; line-height: 2; } .install-help p, .install-help ol { margin: 0; } .install-help ol { padding-inline-start: 20px; }
+
+
+/* ===== حضور و غیاب: فیلد «توضیح» دیگر نامرئی و روی گزینه‌ها نیست (باعث باز شدن کیبورد می‌شد) ===== */
+.radio-row { align-items: center; } .radio-row .att-note { flex: 1 1 160px; min-width: 130px; max-width: 100%; min-height: 38px; padding: 4px 12px; }
+.radio-row label input[type='radio'] { width: 100%; height: 100%; }
+
+/* ===== گوشی: تناسب اندازه‌ها در همه‌ی بخش‌ها (بنر، تیتر، کارت، دکمه، ورودی، تب‌های بازوبسته) ===== */
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  h1 { font-size: 1.25rem; } h2 { font-size: 1.08rem; } h3 { font-size: .98rem; }
+  input, select, textarea { min-height: 42px; font-size: .95rem; padding-block: 8px; }
+  .btn { min-height: 40px; font-size: .9rem; padding-inline: 14px; } .btn.sm { min-height: 34px; font-size: .8rem; padding-inline: 10px; }
+  .mobilebar { padding: 8px 12px; gap: 8px; } .mobilebar b { font-size: .95rem; } .mobilebar .btn { min-height: 34px; padding-inline: 12px; font-size: .82rem; }
+  .page-head { margin-bottom: 14px; gap: 10px; } .ph-title { gap: 10px; } .ph-ico { width: 44px; height: 44px; border-radius: 14px; } .ph-ico svg, .ph-ico .illus { width: 30px !important; height: 30px !important; }
+  .card { padding: 14px; border-radius: 18px; }
+  .collapse { padding: 0; } .collapse-head { padding: 12px 14px; gap: 8px; } .collapse-title { font-size: .95rem; } .collapse-title small { font-size: .74rem; } .collapse-body { padding: 0 14px 14px; }
+  .list-item { padding: 10px 12px; gap: 8px; }
+  .tab-list { padding: 4px; gap: 4px; } .tab { padding: 7px 10px; font-size: .82rem; }
+  /* بنر خوش‌آمدگویی داشبورد و پروفایل */
+  .hero, .prof { grid-template-columns: auto 1fr; gap: 12px; padding: 14px; border-radius: 22px; margin-bottom: 14px; }
+  .hero-avatar { width: 58px !important; height: 58px !important; box-shadow: 0 0 0 3px rgba(255,255,255,.3), 0 6px 14px rgba(0,0,0,.25); }
+  .hero h1, .prof h1 { font-size: 1.05rem; } .hero p, .prof p { font-size: .8rem; margin-top: 2px; line-height: 1.7; }
+  .hero-chips { gap: 6px; margin-top: 8px; } .hero-chip { font-size: .72rem; padding: 2px 10px; }
+  .hero-mascot { display: none; }
+  .tile { font-size: .76rem; } .tile .illus { width: 50px; height: 50px; }
+  .radio-row .att-note { flex-basis: 100%; }
+}
+@media (max-width: 760px) { .hero-mascot { display: none; } }
+
+/* ===== نظرسنجی معلم‌ها ===== */
+.rate { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; } .rate legend { font-weight: 800; padding: 0; margin-bottom: 8px; } .rate legend small { font-weight: 400; color: var(--muted); }
+.rate-opts { display: flex; gap: 8px; } .rate-opts label { position: relative; flex: 1; }
+.rate-opts label input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; min-height: 0; cursor: pointer; margin: 0; }
+.rate-opts label span { display: grid; place-items: center; min-height: 46px; border-radius: 14px; border: 2px solid var(--border); background: var(--surface); font-weight: 800; font-size: 1.05rem; transition: all .15s; }
+.rate-opts label:hover span { border-color: var(--ac, var(--primary)); }
+.rate-opts label input:focus-visible + span { outline: 3px solid color-mix(in srgb, var(--primary) 40%, transparent); }
+.rate-opts label input:checked + span.r1 { background: #ef4444; border-color: #ef4444; color: #fff; } .rate-opts label input:checked + span.r2 { background: #f97316; border-color: #f97316; color: #fff; }
+.rate-opts label input:checked + span.r3 { background: #eab308; border-color: #eab308; color: #1f2937; } .rate-opts label input:checked + span.r4 { background: #84cc16; border-color: #84cc16; color: #1f2937; } .rate-opts label input:checked + span.r5 { background: #22c55e; border-color: #22c55e; color: #fff; }
+.rate-ends { display: flex; justify-content: space-between; color: var(--muted); margin-top: 4px; }
+.meters { display: grid; gap: 10px; } .meter { display: grid; grid-template-columns: 150px 1fr 44px; gap: 10px; align-items: center; font-size: .92rem; }
+.meter-bar { height: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; } .meter-bar span { display: block; height: 100%; border-radius: 99px; background: #eab308; }
+.meter-bar span.m1 { background: #ef4444; } .meter-bar span.m2 { background: #f97316; } .meter-bar span.m4 { background: #84cc16; } .meter-bar span.m5 { background: #22c55e; }
+.rv-stars { color: #f59e0b; letter-spacing: 2px; font-size: .95rem; margin-bottom: 2px; }
+@media (max-width: 640px) { .meter { grid-template-columns: 1fr 44px; } .meter-l { grid-column: 1 / -1; } .meter-bar { grid-column: 1; } .rate-opts label span { min-height: 42px; } }
+
+/* ===== کارنامه روی گوشی: همان چیدمان قبلی، فقط اندازه و متن جمع‌وجورتر ===== */
+@media (max-width: 640px) {
+  .rc-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rc-stats .card { padding: 12px; } .rc-stats .big-num { font-size: 1.6rem; margin: 2px 0; line-height: 1.25; }
+  .rc-stats .small, .rc-stats .muted { font-size: .72rem; line-height: 1.65; } .rc-stats .badge { font-size: .72rem; padding: 1px 9px; }
+  .rc-stats .stat { padding: 12px; gap: 8px; } .rc-stats .stat .value { font-size: 1.05rem; }
+  .rc-tw table { font-size: .76rem; } .rc-tw th { font-size: .7rem; padding: 7px 6px; white-space: normal; line-height: 1.45; } .rc-tw td { padding: 7px 6px; }
+  .rc-tw td .badge { font-size: .72rem; padding: 1px 8px; } .rc-tw td[style*='min-width'] { min-width: 72px !important; } .rc-tw td .small { font-size: .68rem; }
+}
+
+/* دکمه‌ی نصب روی لپ‌تاپ/رایانه: جمع‌وجور و یک‌خطی (روی گوشی همان کارت تمام‌عرض می‌ماند) */
+@media (min-width: 761px) {
+  .install-app { display: inline-block; max-width: 100%; }
+  .install-btn { width: auto; padding: 8px 16px; border-width: 1px; border-radius: 12px; gap: 10px; }
+  .install-btn > span:first-child { font-size: 1.2rem; } .install-btn small { display: none; } .install-btn b { font-size: .92rem; }
+}
+/* ===== مثبت و منفی: جمع کل و باقی‌مانده ===== */
+.tally { display: grid; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; margin-bottom: 14px; }
+.tally-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; } .tally-row b { font-size: 1.25rem; } .tally-row .pos { color: var(--ok); } .tally-row .neg { color: var(--danger); }
+.tally-note { font-size: .84rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 8px; }
+.tally-final { font-weight: 800; font-size: 1.05rem; padding: 10px 14px; border-radius: 14px; text-align: center; background: var(--surface); border: 2px solid var(--border); }
+.tally-final.pos { background: var(--ok-50); border-color: var(--ok); color: var(--ok); } .tally-final.neg { background: var(--danger-50); border-color: var(--danger); color: var(--danger); }

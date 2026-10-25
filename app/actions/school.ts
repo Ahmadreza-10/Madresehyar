@@ -81,11 +81,12 @@ export async function deleteGrade(fd: FormData) {
 
 export async function addNote(_: ActionState, fd: FormData): Promise<ActionState> {
   return run([...STAFF], async (user) => {
-    const p = z.object({ studentId: z.string().min(1), type: z.enum(NOTE_TYPES), body: z.string().trim().min(2, 'متن یادداشت را بنویسید.').max(500) }).safeParse(Object.fromEntries(fd));
+    const p = z.object({ studentId: z.string().min(1), type: z.enum(NOTE_TYPES), body: z.string().trim().min(2, 'متن یادداشت را بنویسید.').max(500), count: z.coerce.number().int('تعداد باید عدد صحیح باشد.').min(1, 'تعداد حداقل ۱ است.').max(100, 'تعداد حداکثر ۱۰۰ است.').optional() }).safeParse(Object.fromEntries(fd));
     if (!p.success) return fail(firstZodError(p.error));
     if (!(await canAccessStudent(user, p.data.studentId))) return fail('دسترسی ندارید.');
-    await db.insert(studentNotes).values({ ...p.data, date: todayTehran(), authorId: user.id });
-    await audit(user.id, 'NOTE_ADD', 'student', p.data.studentId, p.data.type);
+    const { count: cnt, ...rest } = p.data;
+    await db.insert(studentNotes).values({ ...rest, count: rest.type === 'note' ? 1 : (cnt ?? 1), date: todayTehran(), authorId: user.id });
+    await audit(user.id, 'NOTE_ADD', 'student', p.data.studentId, `${p.data.type}×${p.data.type === 'note' ? 1 : (p.data.count ?? 1)}`);
     revalidatePath(`/students/${p.data.studentId}`); revalidatePath('/discipline');
     return success('یادداشت ثبت شد.');
   });

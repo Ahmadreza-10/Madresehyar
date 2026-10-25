@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from 'next/server';
  *  ۲) هدرهای امنیتی روی همه‌ی پاسخ‌ها.
  */
 const PUBLIC_PREFIXES = ['/login', '/register', '/features', '/avatars', '/icons', '/_next'];
-const PUBLIC_EXACT = new Set(['/', '/manifest.webmanifest', '/sw.js', '/favicon.ico', '/robots.txt', '/forgot']);
+const PUBLIC_EXACT = new Set(['/', '/manifest.webmanifest', '/sw.js', '/offline.html', '/favicon.ico', '/robots.txt', '/forgot']);
 
 const dev = process.env.NODE_ENV !== 'production';
 const CSP = [

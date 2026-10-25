@@ -1,15 +1,22 @@
-/** محاسبه‌ی امتیاز انضباطی: هر «تشویق» +۱ و هر «انضباطی (منفی)» −۱؛ «یادداشت» ساده امتیازی ندارد */
-export type NoteRow = { studentId: string; type: 'note' | 'praise' | 'discipline'; date: string };
+/** محاسبه‌ی امتیاز انضباطی: هر «تشویق» +۱ و هر «انضباطی (منفی)» −۱ ضرب در «تعداد» (یک یادداشت می‌تواند چند مثبت یا منفی باشد)؛ «یادداشت» ساده امتیازی ندارد */
+export type NoteRow = { studentId: string; type: 'note' | 'praise' | 'discipline'; date: string; count?: number };
 export const noteScore = (t: NoteRow['type']) => (t === 'praise' ? 1 : t === 'discipline' ? -1 : 0);
 const r2 = (n: number) => Math.round(n * 100) / 100;
 type P = { from: string; to: string };
 
 export function netByStudent(notes: NoteRow[], p: P): Map<string, number> {
   const m = new Map<string, number>();
-  for (const n of notes) if (n.date >= p.from && n.date <= p.to) m.set(n.studentId, (m.get(n.studentId) ?? 0) + noteScore(n.type));
+  for (const n of notes) if (n.date >= p.from && n.date <= p.to) m.set(n.studentId, (m.get(n.studentId) ?? 0) + noteScore(n.type) * (n.count ?? 1));
   return m;
 }
 /** رتبه‌ی رقابتی بر اساس امتیاز خالص؛ همه‌ی ids حساب می‌شوند (کسی که یادداشتی ندارد امتیازش صفر است) */
+/** جمع کل مثبت‌ها و منفی‌ها (با احتساب «تعداد») و باقی‌مانده: هر منفی یک مثبت را پاک می‌کند */
+export function tally(notes: { type: 'note' | 'praise' | 'discipline'; count?: number }[]) {
+  let praise = 0, negative = 0;
+  for (const n of notes) { if (n.type === 'praise') praise += n.count ?? 1; else if (n.type === 'discipline') negative += n.count ?? 1; }
+  return { praise, negative, left: praise - negative };
+}
+
 export function rankNet(net: Map<string, number>, ids: string[], me: string): { rank: number; of: number } | null {
   if (!ids.includes(me)) return null;
   const mine = net.get(me) ?? 0;
@@ -21,7 +28,7 @@ export function classDiscipline(notes: NoteRow[], classes: { id: string; name: s
   const rows = classes.map((c) => {
     const ids = new Set(studentsByClass.get(c.id) ?? []);
     let praise = 0, violations = 0;
-    for (const n of notes) if (ids.has(n.studentId) && n.date >= p.from && n.date <= p.to) { if (n.type === 'praise') praise++; else if (n.type === 'discipline') violations++; }
+    for (const n of notes) if (ids.has(n.studentId) && n.date >= p.from && n.date <= p.to) { if (n.type === 'praise') praise += n.count ?? 1; else if (n.type === 'discipline') violations += n.count ?? 1; }
     return { classId: c.id, name: c.name, gradeLevel: c.gradeLevel, students: ids.size, praise, violations, avgNet: ids.size ? r2((praise - violations) / ids.size) : 0 };
   }).filter((x) => x.students > 0).sort((a, b) => b.avgNet - a.avgNet);
   return rows.map((x) => ({ ...x, rank: 1 + rows.filter((y) => y.avgNet > x.avgNet).length }));

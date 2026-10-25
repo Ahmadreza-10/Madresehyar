@@ -39,12 +39,12 @@ export async function updateGrade(_: ActionState, fd: FormData): Promise<ActionS
 /* ---------------- مثبت / منفی ---------------- */
 export async function updateNote(_: ActionState, fd: FormData): Promise<ActionState> {
   return run([...STAFF], async (user) => {
-    const p = z.object({ id: z.string().min(1), type: z.enum(NOTE_TYPES), body: z.string().trim().min(2, 'متن یادداشت را بنویسید.').max(500) }).safeParse(Object.fromEntries(fd));
+    const p = z.object({ id: z.string().min(1), type: z.enum(NOTE_TYPES), body: z.string().trim().min(2, 'متن یادداشت را بنویسید.').max(500), count: z.coerce.number().int().min(1).max(100).optional() }).safeParse(Object.fromEntries(fd));
     if (!p.success) return fail(firstZodError(p.error));
     const [n] = await db.select().from(studentNotes).where(eq(studentNotes.id, p.data.id)).limit(1);
     if (!n || !(await canAccessStudent(user, n.studentId))) return fail('دسترسی ندارید.');
     if (!isManager(user.role) && n.authorId !== user.id) return fail('فقط ثبت‌کننده یا مدیر/معاون می‌تواند این یادداشت را ویرایش کند.');
-    await db.update(studentNotes).set({ type: p.data.type, body: p.data.body, editedAt: new Date() }).where(eq(studentNotes.id, n.id));
+    await db.update(studentNotes).set({ type: p.data.type, body: p.data.body, count: p.data.type === 'note' ? 1 : (p.data.count ?? n.count), editedAt: new Date() }).where(eq(studentNotes.id, n.id));
     await audit(user.id, 'NOTE_UPDATE', 'student', n.studentId, p.data.type);
     revalidatePath('/discipline'); revalidatePath(`/students/${n.studentId}`);
     return success('یادداشت ویرایش شد.');
