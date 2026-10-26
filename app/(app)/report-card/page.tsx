@@ -7,6 +7,7 @@ import { isStaff, schoolOf, focusStudentIds, subjectNames, teacherSubjectIds } f
 import { loadRankContext, resultFor } from '@/lib/ranking';
 import { getSchool, getSettings } from '@/lib/settings';
 import { gradeLabel, subjectRanks, type Ranked } from '@/lib/report-card';
+import { gradeTitle } from '@/lib/grades';
 import { flattenItems, loadReports } from '@/lib/study-data';
 import { summarize } from '@/lib/study-stats';
 import { addDays, todayTehran } from '@/lib/time';
@@ -75,7 +76,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       <div className="grid g4 rc-stats">
         <Card><div className="muted small">{avgWord} ({period.label})</div><div className="big-num num">{val(res.myClass?.avg)}</div>{res.myClass && <Badge tone={tone(res.myClass.avg)}>{gradeLabel(res.myClass.avg)}</Badge>}</Card>
         <Card><div className="muted small">رتبه در کلاس</div><div className="big-num num">{val(res.myClass?.rank)}</div><span className="muted small">از {fa(res.cls.length)} نفر • میانگین معدل کلاس: {val(res.classAvg)}</span></Card>
-        <Card><div className="muted small">رتبه در پایه ({ctx.cls?.gradeLevel ?? '—'})</div><div className="big-num num">{val(res.myGrade?.rank)}</div><span className="muted small">از {fa(res.grd.length)} نفر • میانگین معدل پایه: {val(res.gradeAvg)}</span></Card>
+        <Card><div className="muted small">رتبه در {gradeTitle(ctx.cls?.gradeLevel)}</div><div className="big-num num">{val(res.myGrade?.rank)}</div><span className="muted small">از {fa(res.grd.length)} نفر • میانگین معدل پایه: {val(res.gradeAvg)}</span></Card>
         {onlyMine ? <Card><div className="muted small">درس‌های شما در این کلاس</div><div style={{ fontWeight: 800, marginTop: 6 }}>{scope2 || '—'}</div><span className="muted small">فقط نمره و رتبه‌ی همین درس‌ها نمایش داده می‌شود.</span></Card> : <div className="no-print"><Stat label="مطالعه در ۳۰ روز اخیر" value={formatDuration(study.totalMin)} hint={`${fa(study.activeDays)} روز فعال`} icon="study" tone="accent" /></div>}
       </div>
 
@@ -107,7 +108,7 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
           <Collapse title={onlyMine ? `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} در درس شما — ${period.label}` : `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات کلاس' : 'میانگین معدل کل کلاس'}: <b>{val(res.classAvg)}</b></span>}>
             {res.cls.length ? rankTable(res.cls, false) : <Empty text="در این بازه نمره‌ای برای کلاس ثبت نشده است." icon="grades" />}
           </Collapse>
-          <Collapse title={onlyMine ? `رتبه‌بندی پایه‌ی ${ctx.cls?.gradeLevel ?? ''} در درس شما — ${period.label}` : `رتبه‌بندی پایه‌ی ${ctx.cls?.gradeLevel ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات پایه' : 'میانگین معدل کل پایه'}: <b>{val(res.gradeAvg)}</b></span>}>
+          <Collapse title={onlyMine ? `رتبه‌بندی ${gradeTitle(ctx.cls?.gradeLevel)} در درس شما — ${period.label}` : `رتبه‌بندی ${gradeTitle(ctx.cls?.gradeLevel)} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات پایه' : 'میانگین معدل کل پایه'}: <b>{val(res.gradeAvg)}</b></span>}>
             {res.grd.length ? rankTable(res.grd, true) : <Empty text="در این بازه نمره‌ای برای پایه ثبت نشده است." icon="grades" />}
           </Collapse>
         </div>

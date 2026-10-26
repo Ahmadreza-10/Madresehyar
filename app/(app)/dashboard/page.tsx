@@ -1,3 +1,4 @@
+import { logoutAction } from '@/app/actions/auth';
 import Link from 'next/link';
 import { and, desc, eq, gte, inArray, isNull, or, count } from 'drizzle-orm';
 import { db } from '@/db';
@@ -29,6 +30,7 @@ export default async function Dashboard() {
       <UserAvatar user={u} size={88} className="hero-avatar" />
       <div><h1>سلام {u.firstName} 👋</h1><p>{sub}</p><div className="hero-chips">{unread > 0 && <Link href="/messages" className="hero-chip">✉️ {fa(unread)} پیام جدید</Link>}{chips}</div></div>
       <Mascot size={118} className="hero-mascot" />
+      <div className="hero-actions"><Link href="/profile" className="hero-btn primary">⚙️ حساب کاربری</Link><form action={logoutAction}><button type="submit" className="hero-btn">↩ خروج</button></form></div>
     </section>
   );
   const gentle = u.role === 'PARENT' && u.schoolId ? await (async () => { const w0 = await getStudyWindow(u.schoolId!); const kids = await pendingChildren(u.id, today); return !activeSlot(minutesNowTehran(), w0.startMin, w0.endMin) && minutesNowTehran() >= w0.startMin && minutesNowTehran() < w0.endMin ? kids : []; })() : [];

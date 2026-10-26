@@ -395,7 +395,7 @@ html { scroll-padding-top: 76px; } .main > * { scroll-margin-top: 80px; }
 :root[data-theme='dark'][data-color='orange'] { --primary: #fb923c; --primary-600: #f97316; }
 
 /* اندازه‌ی متن و کاهش انیمیشن */
-:root[data-size='large'] body { font-size: 17.5px; } :root[data-size='small'] body { font-size: 13.5px; }
+
 :root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 
 /* تنظیمات ظاهر در «حساب من» */
@@ -981,3 +981,64 @@ input, select, textarea { min-height: 48px; font-size: 1rem; }
 .tally-note { font-size: .84rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 8px; }
 .tally-final { font-weight: 800; font-size: 1.05rem; padding: 10px 14px; border-radius: 14px; text-align: center; background: var(--surface); border: 2px solid var(--border); }
 .tally-final.pos { background: var(--ok-50); border-color: var(--ok); color: var(--ok); } .tally-final.neg { background: var(--danger-50); border-color: var(--danger); color: var(--danger); }
+
+
+/* =====================================================================
+   مقیاس یکسان برای کل سایت
+   تنظیم «اندازه‌ی متن» (کوچک / معمولی / درشت) همه‌ی بخش‌ها را (متن، فاصله‌ها، آیکون‌ها، عکس‌ها) با یک ضریب بزرگ یا کوچک می‌کند.
+   ضریب در --z است. اندازه‌های بر پایه‌ی ارتفاع صفحه (vh/dvh) باید بر همین ضریب تقسیم شوند، وگرنه با zoom کج می‌شوند.
+   ===================================================================== */
+:root { --z: 1; }
+:root[data-size='small'] { --z: .9; }
+:root[data-size='large'] { --z: 1.15; }
+html { zoom: var(--z); }
+.shell { min-height: calc(100vh / var(--z)); } .sidebar { height: calc(100vh / var(--z)); }
+.login-page { min-height: calc(100dvh / var(--z)); } .login-scene { max-height: calc(34vh / var(--z)); }
+.msgr { height: calc((100dvh - 40px) / var(--z)); }
+.more-sheet { max-height: calc(70vh / var(--z)); } .msgr-info-body { max-height: calc(65vh / var(--z)); }
+.cm-box { max-height: calc(88dvh / var(--z)); } .cm-list { max-height: calc(40dvh / var(--z)); }
+.ie-back { zoom: calc(1 / var(--z)); } .ie-canvas { max-height: 52dvh; }
+
+/* =====================================================================
+   گوشی: یک مقیاس تایپوگرافی برای همه‌ی صفحه‌ها (داشبورد و بقیه یکسان)
+   عنوان صفحه ۱۸ — عنوان بخش ۱۵ — متن ۱۵ — توضیح ۱۲٫۵ — عدد درشت ۲۲
+   ===================================================================== */
+@media (max-width: 640px) {
+  .msgr { height: calc((100dvh - 150px) / var(--z)); }
+  .main h1, .main .hero h1, .main .prof h1 { font-size: 18px; line-height: 1.5; }
+  .main h2 { font-size: 16px; } .main h3, .main .collapse-title { font-size: 15px; }
+  .main .hero p, .main .prof p, .main .page-head p { font-size: 12.5px; line-height: 1.7; }
+  .main .hero-chip { font-size: 12px; padding: 3px 11px; }
+  .main .tile { font-size: 13px; }
+  .main .big-num { font-size: 22px; } .main .stat .value, .main .rank-strip b { font-size: 16px; }
+  .main .rank-strip span, .main .stat .label { font-size: 12.5px; }
+  .hero .hero-avatar { width: 64px !important; height: 64px !important; }
+}
+
+/* دکمه‌های «حساب کاربری» و «خروج» داخل بنر خوش‌آمد (فقط گوشی) */
+.hero-actions { display: none; }
+.hero-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.32); border-radius: 999px; padding: 6px 14px; cursor: pointer; text-decoration: none; backdrop-filter: blur(4px); min-height: 0; }
+.hero-btn:hover { background: rgba(255,255,255,.32); text-decoration: none; }
+.hero-actions form { margin: 0; }
+@media (max-width: 760px) {
+  .hero-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  body:has(.hero) .mobilebar > .row:last-child { display: none; }
+}
+
+/* فهرست رتبه‌ی نفرات: هر نفر یک سطر فشرده (نفر اول تا سوم با مدال) */
+.rank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rank-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.rank-list li.me { background: color-mix(in srgb, var(--primary) 12%, var(--surface)); border-color: var(--primary); }
+.rank-list li[data-rank='1'] { border-inline-start: 4px solid #f59e0b; } .rank-list li[data-rank='2'] { border-inline-start: 4px solid #94a3b8; } .rank-list li[data-rank='3'] { border-inline-start: 4px solid #d97706; }
+.rank-list .rk { min-width: 56px; font-weight: 800; white-space: nowrap; }
+.rank-list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; } .rank-list .nm small { display: block; color: var(--muted); font-size: .76rem; font-weight: 400; }
+.rank-list .pm { display: flex; gap: 8px; font-size: .88rem; direction: ltr; } .rank-list .pos { color: var(--ok); } .rank-list .neg { color: var(--danger); }
+.rank-list .sc { min-width: 38px; text-align: center; background: var(--surface-2); border-radius: 10px; padding: 3px 8px; }
+
+/* دکمه‌های حساب و خروج: یک نوار جدا در پایین بنر (با خط جداکننده)، نه کنار چیپ‌ها */
+@media (max-width: 760px) {
+  .hero-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.28); }
+  .hero-actions form { display: block; margin: 0; }
+  .hero-actions .hero-btn { width: 100%; justify-content: center; min-height: 40px; padding: 8px 12px; border-radius: 12px; font-size: 13px; background: transparent; border: 1.5px solid rgba(255,255,255,.55); backdrop-filter: none; }
+  .hero-actions .hero-btn.primary { background: #fff; color: #4f46e5; border-color: #fff; }
+}

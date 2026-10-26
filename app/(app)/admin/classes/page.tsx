@@ -1,9 +1,10 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { classes, classSubjects, parentStudents, subjects, users } from '@/db/schema';
-import { addParentToStudent, createClass, createSubjects, deleteClass, deleteSubject, moveStudentToClass, quickAddStudent, saveClassSubjects, unlinkParent } from '@/app/actions/admin';
+import { addParentToStudent, createClass, createSubjects, deleteClass, deleteSubject, moveStudentToClass, quickAddStudent, saveClassSubjects, setClassGrade, unlinkParent } from '@/app/actions/admin';
 import { requireUser } from '@/lib/auth';
 import { fa, fullName } from '@/lib/format';
+import { GRADE_LEVELS, gradeTitle, isKnownGrade } from '@/lib/grades';
 import ActionForm from '@/components/ActionForm';
 import { Collapse } from '@/components/Interactive';
 import { Badge, Card, Empty, PageHead } from '@/components/ui';
@@ -41,9 +42,10 @@ export default async function AdminClasses() {
       </Collapse>
 
       <div style={{ height: 16 }} />
-      <Collapse title="➕ کلاس جدید" hint="فقط نام کلاس را بنویسید">
+      <Collapse title="➕ کلاس جدید" hint="نام و پایه‌ی کلاس را بنویسید">
         <ActionForm action={createClass} submit="ساخت کلاس">
-          <div className="field"><label>نام کلاس</label><input name="name" required maxLength={60} placeholder="مثلاً: دهم تجربی (ب)" /></div>
+          <div className="inline-fields"><div className="field"><label>نام کلاس</label><input name="name" required maxLength={60} placeholder="مثلاً: C1 یا دهم تجربی (ب)" /></div><div className="field"><label>پایه</label><select name="gradeLevel" required defaultValue=""><option value="" disabled>انتخاب پایه…</option>{GRADE_LEVELS.map((g) => <option key={g} value={g}>{gradeTitle(g)}</option>)}</select></div></div>
+          <p className="hint-t">کلاس‌هایی که پایه‌ی یکسان دارند (مثلاً دو کلاس نهم) در رتبه‌بندی «پایه» با هم مقایسه می‌شوند.</p>
         </ActionForm>
       </Collapse>
 
@@ -53,7 +55,14 @@ export default async function AdminClasses() {
         {cls.map((c) => {
           const rows = cs.filter((r) => r.classId === c.id); const cstu = students.filter((s) => s.classId === c.id);
           return (
-            <Collapse key={c.id} title={`🏫 ${c.name}`} hint={`${fa(rows.length)} درس • ${fa(cstu.length)} دانش‌آموز`} badge={<Badge>{fa(cstu.length)} دانش‌آموز</Badge>}>
+            <Collapse key={c.id} title={`🏫 ${c.name}`} hint={`${gradeTitle(c.gradeLevel)} • ${fa(rows.length)} درس • ${fa(cstu.length)} دانش‌آموز`} badge={<Badge>{fa(cstu.length)} دانش‌آموز</Badge>}>
+              <h4 className="cls-sec">۰. پایه‌ی این کلاس</h4>
+              <ActionForm action={setClassGrade} submit="ذخیره‌ی پایه" resetOnSuccess={false} small>
+                <input type="hidden" name="classId" value={c.id} />
+                {!isKnownGrade(c.gradeLevel) && <div className="alert warn" style={{ marginBottom: 8 }}>پایه‌ی این کلاس هنوز مشخص نشده (الان «{c.gradeLevel}» ثبت شده). پایه را انتخاب کنید تا رتبه‌ها درست و با نام پایه نمایش داده شوند.</div>}
+                <div className="field"><label>این کلاس مربوط به کدام پایه است؟</label><select name="gradeLevel" defaultValue={isKnownGrade(c.gradeLevel) ? c.gradeLevel : ''} required><option value="" disabled>انتخاب پایه…</option>{GRADE_LEVELS.map((g) => <option key={g} value={g}>{gradeTitle(g)}</option>)}</select></div>
+              </ActionForm>
+
               <h4 className="cls-sec">۱. درس‌ها و معلم‌ها</h4>
               {subs.length ? (
                 <ActionForm action={saveClassSubjects} submit="ذخیره‌ی درس‌های این کلاس" resetOnSuccess={false}>

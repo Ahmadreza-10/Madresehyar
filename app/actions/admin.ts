@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { classes, classSubjects, grades, parentStudents, passwordResets, ROLES, schools, sessions, subjects, users, type Role } from '@/db/schema';
 import { audit } from '@/lib/audit';
+import { GRADE_LEVELS } from '@/lib/grades';
 import { fail, firstZodError, run, success, type ActionState } from '@/lib/action';
 import type { CurrentUser } from '@/lib/auth';
 import { classInSchool, isManager, schoolOf } from '@/lib/permissions';
@@ -161,12 +162,25 @@ export async function createClass(_: ActionState, fd: FormData): Promise<ActionS
     const p = z.object({ name: z.string().trim().min(2, 'نام کلاس را بنویسید.').max(60), gradeLevel: z.string().trim().max(30).optional(), academicYear: z.string().trim().max(20).optional() }).safeParse(Object.fromEntries(fd));
     if (!p.success) return fail(firstZodError(p.error));
     const school = schoolOf(u);
-    const gradeLevel = p.data.gradeLevel || p.data.name.split(/\s+/)[0]; // «دهم تجربی (ب)» ← «دهم»
+    const gradeLevel = p.data.gradeLevel || p.data.name.split(/\s+/)[0]; // اگر پایه انتخاب نشد: اولین کلمه‌ی نام («دهم تجربی (ب)» ← «دهم»)
     const academicYear = p.data.academicYear || (await getSettings(school)).academicYear || '۱۴۰۵-۱۴۰۶';
     const [c] = await db.insert(classes).values({ name: p.data.name, gradeLevel, academicYear, schoolId: school }).returning();
     await audit(u.id, 'CLASS_CREATE', 'class', c.id, c.name);
     revalidatePath('/admin/classes');
     return success('کلاس ساخته شد. حالا همین‌جا درس‌ها و دانش‌آموزانش را اضافه کنید.');
+  });
+}
+
+/** تعیین «پایه»ی یک کلاس (مثلاً نهم). کلاس‌هایی که پایه‌ی یکسان دارند در رتبه‌بندی «پایه» با هم مقایسه می‌شوند. */
+export async function setClassGrade(_: ActionState, fd: FormData): Promise<ActionState> {
+  return run([...MANAGERS], async (u) => {
+    const classId = String(fd.get('classId') ?? ''); const gradeLevel = String(fd.get('gradeLevel') ?? '').trim();
+    if (!(GRADE_LEVELS as readonly string[]).includes(gradeLevel)) return fail('یکی از پایه‌ها را انتخاب کنید.');
+    if (!(await classInSchool(u, classId))) return fail('این کلاس در مدرسه‌ی شما نیست.');
+    await db.update(classes).set({ gradeLevel }).where(eq(classes.id, classId));
+    await audit(u.id, 'CLASS_GRADE', 'class', classId, gradeLevel);
+    revalidatePath('/admin/classes'); revalidatePath('/report-card'); revalidatePath('/discipline'); revalidatePath('/grades');
+    return success(`پایه‌ی این کلاس «${gradeLevel}» شد.`);
   });
 }
 export async function deleteClass(_: ActionState, fd: FormData): Promise<ActionState> {

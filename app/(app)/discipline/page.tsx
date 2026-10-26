@@ -13,7 +13,9 @@ import { disciplineTrend } from '@/lib/trends';
 import { fa, formatJalali, fullName } from '@/lib/format';
 import ActionForm from '@/components/ActionForm';
 import TrendChart from '@/components/TrendChart';
-import { PeriodPicker, Tabs } from '@/components/Interactive';
+import { Collapse, PeriodPicker, Tabs } from '@/components/Interactive';
+import { getSettings } from '@/lib/settings';
+import { gradeTitle } from '@/lib/grades';
 import { Badge, Card, Empty, PageHead } from '@/components/ui';
 
 export const metadata = { title: 'مثبت‌ها و منفی‌ها' };
@@ -48,7 +50,22 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
   // نفرات برتر «پایه‌ی» این دانش‌آموز (برای معلم/معاون/مدیر): بر اساس معدل و بر اساس انضباط
   const nm = new Map(d.students.map((s) => [s.id, fullName(s)])); const clsName = new Map(d.classes.map((c) => [c.id, c.name]));
   const clsOf = new Map(d.students.map((s) => [s.id, s.classId]));
-  const topDisc = ctx.gradeIds.map((id) => ({ id, net: net.get(id) ?? 0 })).sort((a, b) => b.net - a.net).map((x, _i, arr) => ({ ...x, rank: 1 + arr.filter((y) => y.net > x.net).length })).slice(0, 8);
+  const showLists = staff || (await getSettings(u.schoolId!)).showRankLists === '1';
+  // مثبت و منفی هر دانش‌آموز در همین بازه (با احتساب «تعداد») برای جدول رتبه‌ی نفرات
+  const per = new Map<string, { praise: number; negative: number }>();
+  for (const n of d.notes) { if (n.date < period.from || n.date > period.to) continue; const e = per.get(n.studentId) ?? { praise: 0, negative: 0 }; if (n.type === 'praise') e.praise += n.count ?? 1; else if (n.type === 'discipline') e.negative += n.count ?? 1; per.set(n.studentId, e); }
+  const rankRows = (ids: string[]) => ids.map((id) => ({ id, praise: per.get(id)?.praise ?? 0, negative: per.get(id)?.negative ?? 0, net: net.get(id) ?? 0 }))
+    .sort((a, b) => b.net - a.net || (nm.get(a.id) ?? '').localeCompare(nm.get(b.id) ?? '', 'fa')).map((x, _i, arr) => ({ ...x, rank: 1 + arr.filter((y) => y.net > x.net).length }));
+  const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '');
+  const peopleTable = (rows: ReturnType<typeof rankRows>, withClass: boolean) => (
+    <ol className="rank-list">{rows.map((x) => (
+      <li key={x.id} className={x.id === st.id ? 'me' : ''} data-rank={x.rank <= 3 ? x.rank : undefined}>
+        <span className="rk">{medal(x.rank)} {fa(x.rank)}</span>
+        <span className="nm">{nm.get(x.id)}{withClass && <small>{clsName.get(clsOf.get(x.id) ?? '') ?? ''}</small>}</span>
+        <span className="pm"><b className="pos" title="مثبت">+{fa(x.praise)}</b><b className="neg" title="منفی">−{fa(x.negative)}</b></span>
+        <b className="sc num" title="امتیاز">{fa(x.net)}</b>
+      </li>))}</ol>);
+  const classRows = rankRows(ctx.classIds); const gradeRows = rankRows(ctx.gradeIds);
 
   const href = (p: string) => { const q = new URLSearchParams(); q.set('student', st.id); if (p !== 'year') q.set('p', p); return `/discipline?${q}`; };
   const options = [{ key: 'year', label: 'کل سال', href: href('year') }, ...ctx.months.map((m) => ({ key: m.key, label: m.label, href: href(m.key) }))];
@@ -65,6 +82,12 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
               <select name="type" defaultValue={n.type}><option value="praise">تشویق (+۱)</option><option value="discipline">انضباطی / منفی (−۱)</option><option value="note">یادداشت ساده</option></select>
               <NoteCount defaultValue={n.count} /><textarea name="body" defaultValue={n.body} required maxLength={500} style={{ minHeight: 64 }} /></ActionForm></div></details>)}</div><Badge tone={noteTone[n.type]}>{noteLabel[n.type]}{n.type !== 'note' && n.count > 1 ? ` ×${fa(n.count)}` : ''}</Badge></div>)}</div> : <Empty text="در این بازه یادداشتی ثبت نشده است." icon="note" />}
       </Card></div>) },
+    { id: 'people', label: '🏅 رتبه‌ی نفرات', content: showLists ? (
+      <div className="stack">
+        <Card title={`کلاس ${ctx.cls?.name ?? ''} — ${period.label}`}>{classRows.length ? peopleTable(classRows, false) : <Empty text="دانش‌آموزی در این کلاس نیست." icon="note" />}
+          <p className="muted small" style={{ marginTop: 10 }}>امتیاز = تعداد مثبت‌ها منهای تعداد منفی‌ها. نفر اول بیشترین امتیاز را دارد.</p></Card>
+        <Collapse title={`${gradeTitle(ctx.cls?.gradeLevel)} (همه‌ی کلاس‌ها)`} hint="برای دیدن رتبه‌ی همه‌ی هم‌پایه‌ها بزنید">{gradeRows.length ? peopleTable(gradeRows, true) : <Empty text="هم‌پایه‌ای پیدا نشد." icon="note" />}</Collapse>
+      </div>) : <div className="alert warn">نمایش فهرست کامل رتبه‌ها برای دانش‌آموزان و اولیا توسط مدرسه غیرفعال شده است؛ فقط رتبه‌ی خودتان نمایش داده می‌شود.</div> },
     { id: 'best', label: '🏆 بهترین کلاس', content: (
       <Card title="بهترین کلاس از نظر انضباط" action={best ? <Badge tone="ok">🏆 {best.name}</Badge> : undefined}>
         {clsRank.length ? <div className="table-wrap"><table><thead><tr><th>رتبه</th><th>کلاس</th><th>تشویق</th><th>منفی</th><th>میانگین هر نفر</th></tr></thead><tbody>
@@ -76,10 +99,6 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
       <Card title="روند انضباط: دانش‌آموز و کلاس">
         <TrendChart labels={trend.labels} series={[{ name: fullName(st), color: 'var(--primary)', values: trend.mine }, { name: 'میانگین کلاس (به‌ازای هر نفر)', color: 'var(--warn)', values: trend.classAvg }]} />
       </Card>) },
-    ...(staff ? [{ id: 'top', label: '⭐ نفرات برتر', content: (
-      <div>
-        <Card title={`بر اساس انضباط — پایه‌ی ${ctx.cls?.gradeLevel ?? ''}`}><div className="list">{topDisc.map((x) => <div className="list-item" key={x.id}><div><b>{nm.get(x.id)}</b><div className="muted small">{clsName.get(clsOf.get(x.id) ?? '') ?? '—'}</div></div><div className="row" style={{ gap: 6 }}><Badge tone="primary">امتیاز {fa(x.net)}</Badge><Badge tone="ok">رتبه {fa(x.rank)}</Badge></div></div>)}</div></Card>
-      </div>) }] : []),
   ];
 
   return (
@@ -95,8 +114,6 @@ export default async function DisciplinePage({ searchParams }: { searchParams: P
           <div className="rank-strip">
             <div><span>رتبه در کلاس</span><b className="num">{of(dc.cls?.rank, dc.cls?.of ?? 0)}</b></div>
             <div><span>رتبه در پایه</span><b className="num">{of(dc.grd?.rank, dc.grd?.of ?? 0)}</b></div>
-            <div><span>تشویق / منفی</span><b className="num">{fa(sum.praise)} / {fa(sum.negative)}</b></div>
-            <div><span>باقی‌مانده</span><b className="num">{sum.left > 0 ? `${fa(sum.left)} مثبت` : sum.left < 0 ? `${fa(-sum.left)} منفی` : 'صفر'}</b></div>
           </div>
         </section>
       </div>

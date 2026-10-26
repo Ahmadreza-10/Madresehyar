@@ -104,6 +104,7 @@ describe('رتبه‌ی هر درس', () => {
 });
 
 import { netByStudent, rankNet, classDiscipline, tally } from '@/lib/discipline-calc';
+import { GRADE_LEVELS, gradeTitle, isKnownGrade } from '@/lib/grades';
 describe('انضباط', () => {
   const n = (s: string, type: 'praise' | 'discipline' | 'note', date: string) => ({ studentId: s, type, date });
   const notes = [n('a', 'praise', '2026-10-01'), n('a', 'praise', '2026-10-02'), n('b', 'discipline', '2026-10-03'), n('c', 'note', '2026-10-03'), n('d', 'praise', '2026-11-30')];
@@ -142,6 +143,10 @@ describe('روندها و بهترین کلاس', () => {
   it('روند انضباط', () => {
     const t = disciplineTrend(d, { studentId: 'a1', classId: 'A' }); expect(t.mine.slice(0, 2)).toEqual([1, -1]); expect(t.classAvg.slice(0, 2)).toEqual([0.5, -1]);
     expect(t.mine.slice(2).every((v) => v === null)).toBe(true);
+  });
+  it('نام پایه: فقط پایه‌های شناخته‌شده؛ نام کلاس مثل C1 هرگز به‌جای پایه نمایش داده نمی‌شود', () => {
+    expect(gradeTitle('نهم')).toBe('پایه‌ی نهم'); expect(gradeTitle('C1')).toBe('پایه'); expect(gradeTitle(undefined)).toBe('پایه');
+    expect(isKnownGrade('دوازدهم')).toBe(true); expect(isKnownGrade('C2')).toBe(false); expect(GRADE_LEVELS).toHaveLength(12);
   });
   it('جمع مثبت و منفی و باقی‌مانده: هر منفی یک مثبت را پاک می‌کند', () => {
     const t = tally([{ type: 'praise', count: 20 }, { type: 'discipline', count: 10 }, { type: 'note' }, { type: 'praise' }]);
