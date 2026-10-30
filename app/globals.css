@@ -1042,3 +1042,292 @@ html { zoom: var(--z); }
   .hero-actions .hero-btn { width: 100%; justify-content: center; min-height: 40px; padding: 8px 12px; border-radius: 12px; font-size: 13px; background: transparent; border: 1.5px solid rgba(255,255,255,.55); backdrop-filter: none; }
   .hero-actions .hero-btn.primary { background: #fff; color: #4f46e5; border-color: #fff; }
 }
+
+/* =====================================================================
+   طراحی ساده و روشن (v2) — الهام از اپ دایاموز
+   هدف: فضای خالی بیشتر، کاشی‌های سفید و درشت، بدون گرادیان و انیمیشن‌های شلوغ
+   این بلوک آخرِ فایل است تا بر قاعده‌های قبلی غالب شود؛ هیچ قابلیتی عوض نشده است.
+   ===================================================================== */
+:root {
+  --bg: #f3f4f7; --surface: #ffffff; --surface-2: #f6f7fa; --border: #e6e8ee; --text: #1c2333; --muted: #6b7385;
+  --shadow: 0 1px 2px rgba(20, 28, 48, .04), 0 4px 14px rgba(20, 28, 48, .05); --radius: 18px;
+}
+body::before { display: none; }                       /* لکه‌های رنگیِ پس‌زمینه حذف شد */
+body { line-height: 1.7; }
+
+/* انیمیشن‌ها: فقط یک محوشدنِ نرم و کوتاه، بدون پرش و تأخیرهای پلکانی */
+.main > *, .grid > *, .tile, .mate, .tab-panel:not([hidden]) { animation: softIn .25s ease both !important; animation-delay: 0s !important; }
+@keyframes softIn { from { opacity: 0; } to { opacity: 1; } }
+.brand-mascot, .ph-ico .illus, .empty-illus, .mascot { animation: none !important; }
+
+/* کارت‌ها: سفید، تخت، با سایه‌ی کم */
+.card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card:hover, .stat:hover { transform: none; box-shadow: var(--shadow); }
+.card > .row > h3::before, .card > h3::before { display: none; }       /* نقطه‌ی رنگیِ کنار تیتر کارت‌ها */
+.grid { gap: 16px; }
+.stat-icon { border-radius: 14px; }
+th { background: var(--surface-2); }
+
+/* سربرگ صفحه‌ها: ساده، بدون جعبه‌ی رنگیِ بزرگ */
+.page-head { margin-bottom: 20px; }
+.ph-ico { width: 52px; height: 52px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); box-shadow: none; animation: none; }
+.ph-ico .illus { width: 36px; height: 36px; }
+
+/* دکمه‌ها: رنگ ساده، بدون گرادیان و سایه‌ی رنگی */
+.btn { background: var(--ac); box-shadow: none; border-radius: 14px; }
+.btn:hover { background: var(--ac); filter: brightness(.94); transform: none; box-shadow: none; }
+.btn.ghost { background: var(--surface); } .btn.ghost:hover { background: var(--surface-2); filter: none; }
+.picker-btn { box-shadow: none; } .picker-btn:hover, .picker-btn.open { transform: none; }
+.picker-year.on, .picker-month.on { background: var(--ac); }
+.tab-list { background: var(--surface-2); border-radius: 14px; } .tab.on { box-shadow: 0 1px 4px rgba(20,28,48,.1); }
+.filters-bar { background: var(--surface); border-color: var(--border); }
+
+/* منوی کناری (دسکتاپ): سفید و آرام؛ آیکن‌ها کوچک‌تر و بدون جعبه‌ی رنگی */
+.sidebar { background: var(--surface); }
+.nav-group { padding: 16px 12px 4px; }
+.nav-link { padding: 6px 10px; border-radius: 12px; font-weight: 500; } .nav-link:hover { transform: none; background: var(--surface-2); }
+.nav-ico { width: 34px; height: 34px; border-radius: 10px; background: transparent; } .nav-link:hover .nav-ico { transform: none; }
+.nav-ico .illus { width: 28px; height: 28px; }
+.nav-link.active { background: var(--surface-2); box-shadow: inset -3px 0 0 var(--ac, var(--primary)); font-weight: 700; }
+
+/* ---------- صفحه‌ی اصلی ---------- */
+.dash-head { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px; margin-bottom: 22px; box-shadow: var(--shadow); display: grid; gap: 16px; }
+.dh-top { display: flex; align-items: center; gap: 14px; }
+.dh-avatar { border-radius: 50%; flex: none; box-shadow: 0 0 0 3px var(--surface-2); }
+.dh-text { flex: 1; min-width: 0; } .dh-text h1 { font-size: 1.3rem; } .dh-text p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+.dh-actions { display: flex; gap: 8px; flex: none; } .dh-actions form { margin: 0; }
+.dh-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); cursor: pointer; padding: 0; min-height: 0; }
+.dh-icon:hover { color: var(--text); background: var(--border); text-decoration: none; } .dh-icon svg { width: 20px; height: 20px; }
+.dh-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px; }
+.dh-stat { background: var(--surface-2); border-radius: 16px; padding: 10px 12px; text-align: center; display: flex; flex-direction: column; gap: 0; }
+.dh-stat b { font-size: 1.2rem; line-height: 1.5; } .dh-stat span { font-size: .75rem; color: var(--muted); }
+.dh-cta { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; border-radius: 16px; background: #16a34a; color: #fff !important; font-weight: 800; font-size: 1rem; }
+.dh-cta:hover { background: #15803d; text-decoration: none; }
+body:has(.dash-head) .mobilebar { display: none; }    /* حساب و خروج داخل سربرگِ صفحه‌ی اصلی هست */
+
+.section-title { font-size: .95rem; color: var(--muted); margin: 4px 6px 10px; }
+.tiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); padding: 18px 8px 14px; gap: 10px;
+  font-weight: 600; font-size: .9rem; line-height: 1.5; min-height: 132px; justify-content: flex-start; transition: box-shadow .2s, transform .15s; }
+.tile .illus { width: 68px; height: 68px; }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(20,28,48,.1); } .tile:hover .illus { animation: none; }
+.tile:active { transform: scale(.98); }
+.tile-badge { top: 10px; }
+
+/* ---------- گوشی ---------- */
+@media (max-width: 900px) {
+  .bottomnav { background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -4px 16px rgba(20,28,48,.05); }
+  .bottomnav a, .bottomnav .bn-more { font-size: .7rem; padding: 6px 2px; gap: 2px; }
+  .bottomnav a.active, .bottomnav .bn-more.active { background: var(--surface-2); font-weight: 700; }
+  .more-sheet a { background: var(--surface-2); }
+}
+@media screen and (max-width: 640px) {
+  body { font-size: 15px; line-height: 1.7; }
+  .main { padding: 14px 14px 92px; }
+  .card { padding: 16px; border-radius: 18px; } .grid { gap: 12px; }
+  .dash-head { padding: 16px; border-radius: 22px; gap: 14px; margin-bottom: 18px; }
+  .dh-text h1 { font-size: 1.15rem; }
+  .tiles { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { min-height: 116px; padding: 14px 4px 10px; font-size: .8rem; border-radius: 20px; gap: 8px; box-shadow: none; }
+  .tile .illus { width: 56px; height: 56px; }
+  .page-head { margin-bottom: 14px; } .ph-ico { width: 44px; height: 44px; }
+  .btn { padding: 10px 16px; font-size: .95rem; } .btn.sm { padding: 6px 12px; font-size: .85rem; }
+}
+
+/* =====================================================================
+   استانداردسازی (v3): دسترس‌پذیری WCAG 2.1 AA، مقیاس تایپوگرافی و فاصله،
+   اندازه‌ی لمسیِ ۴۴px، حلقه‌ی فوکوس یکدست، فرم‌ها، جدول‌ها، صفحه‌های عمومی
+   فقط ظاهر؛ هیچ رفتار یا قابلیتی تغییر نکرده است.
+   ===================================================================== */
+:root {
+  /* مقیاس فاصله (۴px) و شعاع */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px;
+  /* مقیاس نوشتار */
+  --fs-xs: .78rem; --fs-sm: .875rem; --fs-md: 1rem; --fs-lg: 1.2rem; --fs-xl: 1.5rem;
+  /* متن‌های رنگی با کنتراست ≥ 4.5:1 روی زمینه‌ی روشن */
+  --primary: #4338ca; --primary-600: #3730a3; --primary-50: #eceefe;
+  --accent: #0f766e; --ok: #15803d; --warn: #b45309; --danger: #b91c1c;
+  --muted: #5b6477;
+  --focus: #2563eb;
+}
+:root[data-theme='dark'] { --focus: #93c5fd; --muted: #a3acc8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --focus: #93c5fd; --muted: #a3acc8; } }
+
+/* تایپوگرافی */
+body { font-size: var(--fs-md); }
+h1 { font-size: var(--fs-xl); letter-spacing: -.01em; } h2 { font-size: var(--fs-lg); } h3 { font-size: 1.05rem; }
+p { max-width: 70ch; } .card p, td p, .alert p { max-width: none; }
+.small, .hint-t, .muted.small { font-size: var(--fs-sm); }
+.badge { font-size: var(--fs-xs); padding: 3px 10px; }
+a { text-underline-offset: 3px; } .nav-link:hover, .btn:hover, .tile:hover { text-decoration: none; }
+
+/* فوکوس صفحه‌کلید: همیشه دیده شود */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 0; }
+.skip-link { position: fixed; top: 8px; inset-inline-start: 8px; z-index: 200; background: var(--surface); color: var(--text); padding: 10px 16px; border-radius: var(--r-md); border: 2px solid var(--focus); font-weight: 700; transform: translateY(-160%); transition: transform .15s; }
+.skip-link:focus { transform: none; text-decoration: none; }
+#main:focus { outline: none; }
+
+/* اندازه‌ی لمسی حداقل ۴۴px برای کنترل‌ها */
+.btn, .btn.sm, .tab, .seg a, .chip span, .radio-row span, .picker-btn, .tick, .pseg button, .nav-link, .bottomnav a, .bottomnav .bn-more, .more-sheet a, .dh-icon { min-height: 44px; }
+.btn.sm { padding-block: 8px; }
+.chip span, .radio-row span { padding-block: 10px; display: inline-flex; align-items: center; }
+.pw-eye { min-width: 44px; min-height: 44px; }
+
+/* فرم‌ها */
+.form { gap: var(--s4); } .field { gap: 6px; }
+.field > label, .label-t { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+input, select, textarea { min-height: 48px; border-radius: var(--r-md); border-color: #c9cedb; font-size: var(--fs-md); }
+:root[data-theme='dark'] input, :root[data-theme='dark'] select, :root[data-theme='dark'] textarea { border-color: var(--border); }
+input::placeholder, textarea::placeholder { color: #7a8296; opacity: 1; }
+input[aria-invalid='true'], input:user-invalid, select:user-invalid, textarea:user-invalid { border-color: var(--danger); }
+input[type='checkbox'], input[type='radio'] { accent-color: var(--primary); }
+
+/* پیام‌ها و برچسب‌ها: متن تیره‌تر روی زمینه‌ی ملایم، با نشانه‌ی کناری (فقط رنگ معنا را نمی‌رساند) */
+.alert { border-radius: var(--r-md); border-inline-start-width: 4px; padding: 12px 16px; line-height: 1.8; }
+.badge.ok { color: #166534; } .badge.warn { color: #92400e; } .badge.danger { color: #991b1b; } .badge.primary { color: var(--primary); }
+:root[data-theme='dark'] .badge.ok, :root[data-theme='dark'] .badge.warn, :root[data-theme='dark'] .badge.danger { color: inherit; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .badge.ok, :root:not([data-theme='light']) .badge.warn, :root:not([data-theme='light']) .badge.danger { color: inherit; } }
+
+/* جدول‌ها: سربرگ خوانا، ردیف‌ها با فاصله‌ی کافی */
+th { font-size: var(--fs-sm); color: var(--muted); }
+@media (min-width: 641px) {
+  th, td { padding: 12px 16px; }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+}
+.table-wrap { border-radius: var(--r-md); }
+
+/* کارت‌ها و تیتر بخش‌ها */
+.card > h3, .card > .row > h3 { font-size: 1.05rem; }
+.list-item { padding: 14px 0; }
+.empty { padding: 32px 16px; font-size: var(--fs-sm); }
+.stack > * + * { margin-top: var(--s4); }
+
+/* نوار موبایل و نوار پایین */
+.mobilebar { min-height: 56px; }
+.bottomnav a span, .bottomnav .bn-more span { font-size: .72rem; line-height: 1.3; }
+
+/* ---------- صفحه‌ی ورود: آرام و حرفه‌ای (بدون گرادیان‌های شلوغ) ---------- */
+.login-hero { background: linear-gradient(160deg, #312e81, #3730a3); }
+.login-hero h1 { font-size: 1.9rem; }
+.hero-points div { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+.login-scene { filter: none; opacity: .95; }
+.login-card { animation: softIn .25s ease both; }
+.login-card h2 { font-size: 1.5rem; }
+.login-opt { box-shadow: none; transform: none; min-height: 64px; }
+.login-opt:hover { transform: none; box-shadow: none; }
+
+/* ---------- تعرفه‌ها و امکانات ---------- */
+.reg-page { gap: var(--s5); padding-block: var(--s5) 56px; }
+.plan-card { border-radius: var(--r-lg); padding: 22px; box-shadow: var(--shadow); }
+.plan-card.on { box-shadow: 0 0 0 2px var(--primary); }
+.plan-flag { background: var(--primary); }
+.feat { border-radius: var(--r-md); padding: 16px; }
+.feat p { color: var(--muted); line-height: 1.8; }
+.reg-steps li { padding: 6px 14px; }
+
+/* چاپ: نادیده‌گرفتن لینک پرش */
+@media print { .skip-link { display: none !important; } }
+
+/* اصلاح سربرگ و نوار پایین (v3.1) */
+.dh-text h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-sub { color: var(--muted); font-size: var(--fs-sm); margin: -4px 0 0; max-width: none; }
+@media (max-width: 900px) {
+  .bottomnav a span, .bottomnav .bn-more span { white-space: normal !important; overflow: visible !important; max-width: 100%; line-height: 1.25; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden !important; }
+}
+
+/* گوشی (v3.2): کارت‌های آماری دوستونه، ردیف‌های جدول سبک‌تر، سربرگ صفحه‌ی عمودی */
+@media screen and (max-width: 640px) {
+  .grid:has(> .stat) { grid-template-columns: 1fr 1fr; }
+  .grid > .stat { flex-direction: column; text-align: center; gap: 6px; padding: 14px 10px; }
+  .grid > .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .card tbody tr { background: transparent; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 10px 0; margin: 0; }
+  .card tbody tr:last-child { border-bottom: 0; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .page-head > .row { width: 100%; }
+  .page-head > .row > .btn { flex: 1; }
+}
+
+/* =====================================================================
+   v4 — اصلاح‌های بعد از دیدن صفحه‌های واقعی روی گوشی
+   ===================================================================== */
+/* دکمه‌ی اصلی همیشه به‌رنگِ اصلی (نه خاکستریِ بخش‌هایی مثل «حساب من») و با کنتراست کافی برای متن سفید */
+:root { --btn-bg: color-mix(in srgb, var(--primary) 88%, #000); }
+:root[data-theme='dark'] { --btn-bg: color-mix(in srgb, var(--primary) 62%, #000); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --btn-bg: color-mix(in srgb, var(--primary) 62%, #000); } }
+.btn { background: var(--btn-bg); color: #fff; }
+.btn:hover { background: var(--btn-bg); }
+.btn.ghost { background: transparent; color: var(--text); }
+.btn.danger { background: var(--danger-50); color: var(--danger); }
+.btn:disabled { opacity: .5; }
+.picker-year.on, .picker-month.on { background: var(--btn-bg); }
+.tab.on, .seg a.on { color: var(--primary); }
+
+/* تب‌ها: خانه‌های هم‌اندازه؛ اگر تعداد فرد بود، آخری تمام‌عرض */
+@media screen and (max-width: 640px) {
+  .tab-list { grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; }
+  .tab { width: 100%; justify-content: center; text-align: center; padding: 10px 8px; line-height: 1.4; }
+  .tab-list > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* نوار بالای گوشی: فقط دو دکمه‌ی آیکنی */
+.mobilebar { padding: 8px 14px; } .mb-actions { gap: 8px; flex-wrap: nowrap; } .mb-actions form { margin: 0; }
+
+/* چشمِ نمایش رمز: وسط فیلد */
+.pw-eye { top: 0; bottom: 0; height: auto; transform: none; right: 4px; left: auto; inset-inline-end: auto; }
+
+/* انتخاب عکس/آواتار در «حساب من» */
+.avatar-picker .ap-current { align-items: center; }
+.avatar-picker .ap-current .stack { display: grid; justify-items: start; gap: 10px; }
+.avatar-picker .ap-current .stack > * { margin: 0; }
+.avatar-picker .ap-current .stack > .muted { max-width: 30ch; }
+
+/* انتخاب رنگ اصلی: همه در یک ردیف */
+.swatches { gap: 10px; justify-content: space-between; } .swatch { width: 44px; height: 44px; }
+
+/* صفحه‌ی ورود: گزینه‌های پایین ساده و هم‌رنگ (نه چهار رنگ متفاوت) */
+.login-opt { --oc: var(--muted); color: var(--text); background: var(--surface); border: 1px solid var(--border); font-weight: 600; }
+.login-opt:hover { background: var(--surface-2); }
+.login-opt span { font-size: 1.25rem; }
+:root[data-theme='dark'] .login-opt, :root[data-theme='dark'] .login-opt:hover { color: var(--text); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .login-opt { color: var(--text); } }
+
+/* حالت تیره: سطح‌ها کمی از هم جدا شوند تا کارت‌ها در زمینه گم نشوند */
+:root[data-theme='dark'] { --bg: #0c1020; --surface: #171d33; --surface-2: #1e2540; --border: #2c3558; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --bg: #0c1020; --surface: #171d33; --surface-2: #1e2540; --border: #2c3558; } }
+
+/* v4.1 — نمودارهای روند: کارت‌های مقدار کوچک‌تر و کم‌ارتفاع‌تر */
+.lc-card { border-width: 1px; border-inline-start-width: 4px; padding: 10px 14px; gap: 2px; }
+.lc-card-v { font-size: 1.5rem; line-height: 1.4; }
+@media screen and (max-width: 640px) {
+  .lc-cards { grid-template-columns: 1fr; gap: 8px; }
+  .lc-card { grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; }
+  .lc-card-n { grid-column: 1; } .lc-card-v { grid-column: 2; grid-row: 1 / span 2; }
+  .lc-card-s { grid-column: 1; }
+}
+/* ردیف‌های کارتیِ جدول در گوشی: اولین سلول (نام/رتبه) به‌عنوان تیتر ردیف پررنگ‌تر و جدا */
+@media screen and (max-width: 640px) {
+  .card tbody tr td:first-child { font-size: 1rem; color: var(--text); }
+  td::before { font-size: .8rem; }
+}
+
+/* جستجوی سریع در سربرگ صفحه‌ی اصلی (مدیر/معاون/معلم) */
+.dh-search { display: flex; gap: 8px; } .dh-search input { flex: 1; min-width: 0; }
+
+/* خلاصه‌ی هفته و هدف مطالعه */
+.week-card { display: grid; gap: 12px; } .week-head { margin: -4px 0 0; max-width: none; }
+.week-goal { display: grid; gap: 8px; }
+.week-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.week-facts > div { background: var(--surface-2); border-radius: 14px; padding: 10px 6px; text-align: center; display: flex; flex-direction: column; }
+.week-facts b { font-size: 1.15rem; } .week-facts span { font-size: .75rem; color: var(--muted); }
+.week-form { gap: 8px; } .week-form input { max-width: 160px; }
+
+/* بخش اختیاری داخل فرم تنظیمات */
+.card-sub { border-top: 1px dashed var(--border); padding-top: 12px; display: grid; gap: 6px; }
+
+/* نوار «آمار زیر مربوط به …» در صفحه‌ی گزارش مطالعه */
+.scope-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--primary-50); border-radius: var(--r-md); padding: 10px 14px; margin-bottom: 12px; font-size: var(--fs-sm); }
+
+/* نتایج جستجو: در همه‌ی اندازه‌ها دیده شود (کلاس stu-list فقط برای گوشی است) */
+.srch-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }

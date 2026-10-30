@@ -30,9 +30,9 @@ export function BottomNav({ items }: { items: NavItem[] }) {
     </nav></>);
 }
 
-const PATH_ILLUS: [string, IllusName][] = [['/surveys', 'survey'], ['/grades', 'grades'], ['/report-card', 'report'], ['/discipline', 'discipline'], ['/schedule', 'schedule'], ['/messages', 'messages'], ['/attendance', 'attendance'], ['/assignments', 'assignments'], ['/announcements', 'announcements'], ['/study', 'study'], ['/students', 'students'], ['/admin/users', 'users'], ['/admin/classes', 'school'], ['/admin/schools', 'school'], ['/admin/settings', 'settings'], ['/admin/audit', 'log'], ['/advisor', 'advisor'], ['/teacher-schedule', 'teacher'], ['/classmates', 'students'], ['/profile', 'users'], ['/help', 'help'], ['/admin/support', 'messages'], ['/admin/requests', 'announcements'], ['/admin/plans', 'report'], ['/admin/admins', 'users']];
+const PATH_ILLUS: [string, IllusName][] = [['/surveys', 'survey'], ['/grades', 'grades'], ['/report-card', 'report'], ['/discipline', 'discipline'], ['/schedule', 'schedule'], ['/messages', 'messages'], ['/attendance', 'attendance'], ['/assignments', 'assignments'], ['/announcements', 'announcements'], ['/study', 'study'], ['/students', 'students'], ['/admin/users', 'users'], ['/admin/classes', 'school'], ['/admin/schools', 'school'], ['/admin/settings', 'settings'], ['/admin/audit', 'log'], ['/admin/backups', 'settings'], ['/advisor', 'advisor'], ['/teacher-schedule', 'teacher'], ['/classmates', 'students'], ['/profile', 'users'], ['/help', 'help'], ['/admin/support', 'messages'], ['/admin/requests', 'announcements'], ['/admin/plans', 'report'], ['/admin/admins', 'users']];
 /** محتوای صفحه؛ رنگ شاخصِ بخش جاری (برای دکمه‌ها، تیترها و تب‌ها) از روی آدرس تعیین می‌شود */
 export function AccentMain({ children }: { children: React.ReactNode }) {
   const path = usePathname(); const hit = PATH_ILLUS.find(([p]) => path === p || path.startsWith(p + '/'));
-  return <main className="main" style={{ '--ac': hit ? ACCENT[hit[1]] : 'var(--primary)' } as CSSProperties}>{children}</main>;
+  return <main id="main" tabIndex={-1} className="main" style={{ '--ac': hit ? ACCENT[hit[1]] : 'var(--primary)' } as CSSProperties}>{children}</main>;
 }

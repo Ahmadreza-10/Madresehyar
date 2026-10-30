@@ -65,7 +65,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                 {roleSelect()}{classSelect()}
                 {superUser && <div className="field"><label>عنوان معاون <span className="muted">(فقط برای معاون)</span></label><input name="viceTitle" list="vice-titles" maxLength={40} placeholder="مثلاً: معاون پرورشی" /></div>}
                 <div className="field"><label>موبایل</label><input name="phone" dir="ltr" inputMode="tel" /></div>
-                <div className="field"><label>رمز عبور <span className="muted">(خالی = ساخت خودکار)</span></label><input name="password" dir="ltr" minLength={10} /></div>
+                <div className="field"><label>رمز عبور <span className="muted">(خالی = ساخت خودکار)</span></label><input name="password" dir="ltr" minLength={8} /></div>
               </div>
             </ActionForm>
       </Collapse>

@@ -42,6 +42,12 @@ export default async function AdminSettings() {
             </div>
             <label className="chip" style={{ width: 'fit-content' }}><input type="checkbox" name="remindersEnabled" defaultChecked={s.remindersEnabled !== '0'} /><span>یادآور گزارش مطالعه برای اولیا (ساعت ۹ شب و یک ساعت مانده به پایان زمان ثبت)</span></label>
             <label className="chip" style={{ width: 'fit-content' }}><input type="checkbox" name="showRankLists" defaultChecked={s.showRankLists === '1'} /><span>نمایش فهرست کامل رتبه‌ی همکلاسی‌ها و هم‌پایه‌ها به دانش‌آموز و ولی</span></label>
+            <div className="card-sub" style={{ marginTop: 6 }}>
+              <b>مثبت و منفی خودکار برای گزارش مطالعه (اختیاری)</b>
+              <label className="chip" style={{ width: 'fit-content', marginTop: 8 }}><input type="checkbox" name="autoStudyPraise" defaultChecked={s.autoStudyPraise === '1'} /><span>به ازای ارسال گزارش مطالعه، ۱ مثبت ثبت شود (روزی یک بار)</span></label>
+              <label className="chip" style={{ width: 'fit-content' }}><input type="checkbox" name="autoStudyNegative" defaultChecked={s.autoStudyNegative === '1'} /><span>به ازای ارسال‌نشدن گزارش مطالعه در یک روز، ۱ منفی ثبت شود</span></label>
+              <p className="hint-t">هر دو گزینه پیش‌فرض خاموش‌اند. «منفی» فقط از روزی که روشنش می‌کنید به بعد حساب می‌شود (برای روزهای گذشته منفی ثبت نمی‌شود) و فقط برای دانش‌آموزی که ولی به او وصل است. اگر ولی «عدم مطالعه» اعلام کرده باشد منفی ثبت نمی‌شود. این یادداشت‌ها با عبارت «(ثبت خودکار)» در بخش مثبت‌ها و منفی‌ها دیده می‌شوند و مدیر یا معاون می‌تواند هر کدام را پاک کند.{s.autoStudyNegative === '1' && s.autoStudyNegativeSince ? ` منفی خودکار از ${formatJalali(s.autoStudyNegativeSince)} فعال است.` : ''}</p>
+            </div>
             <p className="hint-t">ولیِ هر دانش‌آموز فقط در این بازه (به وقت تهران) می‌تواند گزارش مطالعه ثبت کند. «۲۴:۰۰» یعنی تا نیمه‌شب. اگر نمایش فهرست رتبه‌ها را خاموش کنید، دانش‌آموز و ولی فقط رتبه و معدل خودشان را می‌بینند (معلم و مدیر همیشه فهرست را می‌بینند).</p>
           </ActionForm>
         </div>

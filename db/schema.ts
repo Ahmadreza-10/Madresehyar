@@ -342,6 +342,19 @@ export const studySkips = sqliteTable('study_skips', {
   createdAt: createdAt(),
 }, (t) => [uniqueIndex('skip_student_date_uq').on(t.studentId, t.date)]);
 
+/**
+ * نشانه‌ی «مثبت/منفی خودکارِ گزارش مطالعه» (قابلیت اختیاریِ مدرسه): برای هر دانش‌آموز، هر روز و هر نوع فقط یک بار ثبت می‌شود
+ * تا با ریستارت سایت یا اجرای دوباره، یادداشت تکراری ساخته نشود. noteId = یادداشتِ ساخته‌شده در student_notes.
+ */
+export const studyAutoMarks = sqliteTable('study_auto_marks', {
+  id: id(),
+  studentId: text('student_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  date: text('date').notNull(),
+  kind: text('kind', { enum: ['praise', 'negative'] }).notNull(),
+  noteId: text('note_id').references(() => studentNotes.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+}, (t) => [uniqueIndex('auto_mark_uq').on(t.studentId, t.date, t.kind)]);
+
 /** اشتراک اعلان (Web Push) برای هر دستگاه کاربر */
 export const pushSubscriptions = sqliteTable('push_subscriptions', {
   id: id(),

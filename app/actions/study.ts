@@ -10,6 +10,7 @@ import { getStudyWindow } from '@/lib/settings';
 import { isWithinWindow, studyReportSchema, testPercent, totalMinutes } from '@/lib/study';
 import { formatHM, minutesNowTehran, todayTehran } from '@/lib/time';
 import { fail, firstZodError, run, success, type ActionState } from '@/lib/action';
+import { awardStudyPraise, revokeStudyPraise } from '@/lib/study-auto-data';
 
 /** payload به‌صورت JSON در فیلد hidden می‌آید تا فرم پویا (چند دسته تست) ساده بماند */
 export async function submitStudyReport(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -73,6 +74,7 @@ export async function submitStudyReport(_: ActionState, fd: FormData): Promise<A
     if (testRows.length) await db.insert(studyTests).values(testRows);
     await db.delete(studySkips).where(and(eq(studySkips.studentId, studentId), eq(studySkips.date, date))); // اگر قبلاً «عدم مطالعه» زده بود، حالا که گزارش داد لغو می‌شود
     await audit(user.id, editId ? 'STUDY_REPORT_UPDATE' : 'STUDY_REPORT_CREATE', 'study_report', report.id, `برای ${studentId}`);
+    if (await awardStudyPraise(studentId, schoolOf(user), date)) await audit(user.id, 'STUDY_AUTO_PRAISE', 'student', studentId, date);
     revalidatePath('/study'); revalidatePath('/dashboard');
     return success(editId ? 'گزارش ویرایش شد.' : 'گزارش مطالعه ثبت شد.');
   } catch (e) {
@@ -91,6 +93,7 @@ export async function deleteStudyReport(fd: FormData) {
   if (r.createdBy !== user.id || r.date !== todayTehran() || !isWithinWindow(w) || !(await canAccessStudent(user, r.studentId))) return;
   await db.delete(studyReports).where(eq(studyReports.id, id));
   await audit(user.id, 'STUDY_REPORT_DELETE', 'study_report', id);
+  await revokeStudyPraise(r.studentId, r.date);
   revalidatePath('/study');
 }
 

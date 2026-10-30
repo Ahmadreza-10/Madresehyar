@@ -12,7 +12,7 @@ export const COLORS: { id: ColorId; label: string; hex: string }[] = [
   { id: 'green', label: 'سبز', hex: '#22c55e' }, { id: 'pink', label: 'صورتی', hex: '#ec4899' }, { id: 'orange', label: 'نارنجی', hex: '#f97316' },
 ];
 export const PREFS_KEY = 'mdy-prefs';
-export const DEFAULT_PREFS: Prefs = { theme: 'system', color: 'indigo', size: 'normal', reduceMotion: false, haptic: true, remAssign: true, remClass: false, quiet: true, notifMsg: true, notifAnn: true, quietFrom: 22, quietTo: 7, remClassMin: 10, remAssignHour: 17 };
+export const DEFAULT_PREFS: Prefs = { theme: 'light', color: 'indigo', size: 'normal', reduceMotion: false, haptic: true, remAssign: true, remClass: false, quiet: true, notifMsg: true, notifAnn: true, quietFrom: 22, quietTo: 7, remClassMin: 10, remAssignHour: 17 };
 
 export function loadPrefs(): Prefs {
   try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') }; } catch { return DEFAULT_PREFS; }
@@ -36,4 +36,4 @@ export function inQuiet(p: Pick<Prefs, 'quiet' | 'quietFrom' | 'quietTo'>, nowMi
 }
 
 /** اسکریپتِ کوچکی که قبل از نمایش صفحه اجرا می‌شود تا ظاهر انتخاب‌شده بدون پرش اعمال شود */
-export const BOOT_SCRIPT = `(function(){try{var p=JSON.parse(localStorage.getItem('${PREFS_KEY}')||'{}'),r=document.documentElement;if(p.theme==='light'||p.theme==='dark')r.setAttribute('data-theme',p.theme);if(p.color&&p.color!=='indigo')r.setAttribute('data-color',p.color);if(p.size==='large'||p.size==='small')r.setAttribute('data-size',p.size);if(p.reduceMotion)r.setAttribute('data-motion','reduce')}catch(e){}})();`;
+export const BOOT_SCRIPT = `(function(){try{var p=JSON.parse(localStorage.getItem('${PREFS_KEY}')||'{}'),r=document.documentElement;if(p.theme==='system'&&!localStorage.getItem('mdy-theme-v2')){p.theme='light';localStorage.setItem('${PREFS_KEY}',JSON.stringify(p))}localStorage.setItem('mdy-theme-v2','1');var t=p.theme||'light';if(t==='light'||t==='dark')r.setAttribute('data-theme',t);if(p.color&&p.color!=='indigo')r.setAttribute('data-color',p.color);if(p.size==='large'||p.size==='small')r.setAttribute('data-size',p.size);if(p.reduceMotion)r.setAttribute('data-motion','reduce')}catch(e){}})();`;

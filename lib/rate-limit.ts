@@ -14,3 +14,6 @@ export function recordFailure(key: string) {
   attempts.set(key, a);
 }
 export function recordSuccess(key: string) { attempts.delete(key); }
+
+/** فقط برای آزمون‌ها */
+export function resetRateLimits() { attempts.clear(); }

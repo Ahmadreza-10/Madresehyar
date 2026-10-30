@@ -16,6 +16,11 @@ const DEFAULTS: Record<string, string> = {
   periodsPerDay: '4',
   /** نظرسنجی دانش‌آموزان از معلم‌ها باز است؟ */
   teacherSurveyOpen: '1',
+  /** اختیاری: ۱ مثبت خودکار برای هر روزی که گزارش مطالعه ارسال شد */
+  autoStudyPraise: '0',
+  /** اختیاری: ۱ منفی خودکار برای هر روزِ تمام‌شده که گزارش مطالعه ارسال نشد (از روز فعال‌سازی به بعد) */
+  autoStudyNegative: '0',
+  autoStudyNegativeSince: '',
 };
 
 export async function getSchool(schoolId: string | null) {

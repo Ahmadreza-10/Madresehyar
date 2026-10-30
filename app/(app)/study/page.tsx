@@ -10,6 +10,7 @@ import { isManager, isStaff, focusStudentIds } from '@/lib/permissions';
 import { classesFor } from '@/lib/school-data';
 import TeacherStudyView from '@/components/TeacherStudyView';
 import { Tabs } from '@/components/Interactive';
+import AutoSelect from '@/components/AutoSelect';
 import { getStudyWindow } from '@/lib/settings';
 import { flattenItems, loadReports } from '@/lib/study-data';
 import { summarize } from '@/lib/study-stats';
@@ -19,6 +20,8 @@ import { Badge, Card, Empty, PageHead, Stat } from '@/components/ui';
 import StudyForm from '@/components/StudyForm';
 import ReportCard from '@/components/ReportCard';
 import { WeekChart, Heatmap } from '@/components/StudyCharts';
+import WeekSummaryCard from '@/components/WeekSummaryCard';
+import { loadWeekSummary } from '@/lib/weekly-data';
 
 export const metadata = { title: 'گزارش مطالعه' };
 
@@ -40,6 +43,15 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   const chosen = sp.student && students.some((s) => s.id === sp.student) ? sp.student : undefined;
   const reports = await loadReports({ studentIds: chosen ? [chosen] : scope, from });
   const stats = summarize(flattenItems(reports), today);
+  // آمارِ «همه‌ی دانش‌آموزانِ محدوده» (برای مقایسه و میانگین هر نفر)؛ وقتی یک دانش‌آموز انتخاب نشده همان آمار بالاست
+  const reportsAll = chosen ? await loadReports({ studentIds: scope, from }) : reports;
+  const statsAll = chosen ? summarize(flattenItems(reportsAll), today) : stats;
+  const nScope = Math.max(1, scope.length);
+  const studiedToday = new Set(reportsAll.filter((r) => r.date === today).map((r) => r.studentId)).size;
+  const chosenName = chosen ? students.find((x) => x.id === chosen)?.name : undefined;
+  const groupName = chosenClass ? `کلاس ${chosenClass.name}` : 'مدرسه';
+  const scopeTitle = chosenName ?? `همه‌ی دانش‌آموزان ${groupName}`;
+  const avgEach = (min: number) => formatDuration(Math.round(min / nScope));
 
   // درس‌های قابل انتخاب در فرمِ ولی: درس‌های همین مدرسه
   const subjectOpts = canWrite ? await db.select({ id: subjects.id, name: subjects.name }).from(subjects).where(eq(subjects.schoolId, user.schoolId!)).orderBy(asc(subjects.name)) : [];
@@ -107,8 +119,8 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
 
   const progressView = (<>
       <div className="grid g-main">
-        <Card title="مطالعه‌ی ۷ روز اخیر"><WeekChart data={stats.last7} /></Card>
-        <Card title="سهم هر درس">
+        <Card title={staff ? `مطالعه‌ی ۷ روز اخیر — ${chosen ? scopeTitle : `مجموع ${scopeTitle}`}` : 'مطالعه‌ی ۷ روز اخیر'}><WeekChart data={stats.last7} /></Card>
+        <Card title={staff ? `سهم هر درس — ${scopeTitle}` : 'سهم هر درس'}>
           {stats.bySubject.length ? <div className="col">{stats.bySubject.slice(0, 6).map((s) => (
             <div key={s.name}><div className="row between small"><span>{s.name}</span><span className="muted num">{formatDuration(s.min)}</span></div><div className="progress" style={{ marginTop: 4 }}><span style={{ width: `${(s.min / stats.bySubject[0].min) * 100}%` }} /></div></div>))}</div> : <Empty text="هنوز داده‌ای نیست." />}
         </Card>
@@ -117,12 +129,12 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
       <Card title={heatTitle} className=""><Heatmap reports={reports.map((r) => ({ date: r.date, min: r.durationMin / heatDiv }))} today={today} /></Card>
 </>);
   const filters = (<div className="filters-bar">
-          {isManager(user.role) && <a className="btn ghost sm" href={`/study/export?range=${range}${chosen ? `&student=${chosen}` : ''}`}>دانلود اکسل (CSV)</a>}
-          {classOpts.length > 0 && (<form className="row" action="/study"><input type="hidden" name="range" value={range} /><select name="class" defaultValue={chosenClass?.id ?? ''} style={{ width: 200 }}><option value="">همه‌ی کلاس‌ها</option>{classOpts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="btn ghost sm">کلاس</button></form>)}
+          {isManager(user.role) && <a className="btn ghost sm" href={`/study/export?range=${range}${chosen ? `&student=${chosen}` : chosenClass ? `&class=${chosenClass.id}` : ''}`}>دانلود اکسل (.xlsx)</a>}
+          {classOpts.length > 0 && (<form className="row" action="/study"><input type="hidden" name="range" value={range} /><AutoSelect name="class" label="کلاس" defaultValue={chosenClass?.id ?? ''} width={200}><option value="">همه‌ی کلاس‌ها</option>{classOpts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</AutoSelect><noscript><button className="btn ghost sm">کلاس</button></noscript></form>)}
           {students.length > 1 && (
             <form className="row" action="/study"><input type="hidden" name="range" value={range} />{chosenClass && <input type="hidden" name="class" value={chosenClass.id} />}
-              <select name="student" defaultValue={chosen ?? ''} style={{ width: 220 }}><option value="">همه‌ی دانش‌آموزان</option>{students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-              <button className="btn ghost sm">فیلتر</button></form>)}
+              <AutoSelect name="student" label="دانش‌آموز" defaultValue={chosen ?? ''} width={220}><option value="">همه‌ی دانش‌آموزان</option>{students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</AutoSelect>
+              <noscript><button className="btn ghost sm">فیلتر</button></noscript></form>)}
           <div className="seg"><Link href={q({ range: '7' })} className={range === '7' ? 'on' : ''}>۷ روز</Link><Link href={q({ range: '30' })} className={range === '30' ? 'on' : ''}>۳۰ روز</Link><Link href={q({ range: 'all' })} className={range === 'all' ? 'on' : ''}>همه</Link></div>
 </div>);
   const listView = (<>
@@ -137,13 +149,26 @@ export default async function StudyPage({ searchParams }: { searchParams: Promis
   return (
     <div className="compact">
       <PageHead illus="study" title="گزارش مطالعه" sub={user.role === 'STUDENT' ? 'کتاب‌هایی که امروز خواندی و تست‌هایی که زدی را اینجا ثبت کن و پیشرفتت را ببین.' : user.role === 'PARENT' ? 'گزارش مطالعه‌ی روزانه‌ی فرزندتان را اینجا ثبت کنید.' : 'پیگیری مطالعه‌ی دانش‌آموزان (فقط مشاهده و بازخورد)'} />
-      <div className="grid g4" style={{ marginBottom: 16 }}>
-        <Stat label="مطالعه‌ی امروز" value={formatDuration(stats.todayMin)} icon="clock" tone="primary" />
-        <Stat label="مطالعه‌ی این هفته" value={formatDuration(stats.weekMin)} hint="از شنبه" icon="study" tone="accent" />
-        <Stat label={staff && !chosen ? 'روزهای فعال (مجموع)' : 'روزهای پیاپی'} value={`${fa(staff && !chosen ? stats.activeDays : stats.streak)} روز`} icon="fire" tone="warn" />
-        <Stat label="میانگین تست‌ها" value={stats.avgPercent === null ? '—' : `${fa(stats.avgPercent)}٪`} hint={stats.totalTests ? `${fa(stats.totalTests)} تست` : 'هنوز تستی ثبت نشده'} icon="target" tone="ok" />
-      </div>
+      {staff && students.length > 0 && (
+        <div className="scope-bar"><span>آمار زیر مربوط به: <b>{scopeTitle}</b>{!chosen && <span className="muted"> ({fa(scope.length)} نفر)</span>}</span>{chosen && <Link className="btn ghost sm" href={q({ student: undefined })}>نمایش همه‌ی دانش‌آموزان</Link>}</div>)}
+      {staff ? (
+        <div className="grid g4" style={{ marginBottom: 16 }}>
+          <Stat label={chosen ? 'مطالعه‌ی امروز' : 'مجموع مطالعه‌ی امروز'} value={formatDuration(stats.todayMin)} hint={chosen ? `کل ${groupName}: ${formatDuration(statsAll.todayMin)} • میانگین هر نفر ${avgEach(statsAll.todayMin)}` : `میانگین هر نفر: ${avgEach(stats.todayMin)}`} icon="clock" tone="primary" />
+          <Stat label={chosen ? 'مطالعه‌ی این هفته' : 'مجموع مطالعه‌ی این هفته'} value={formatDuration(stats.weekMin)} hint={chosen ? `کل ${groupName}: ${formatDuration(statsAll.weekMin)} • میانگین هر نفر ${avgEach(statsAll.weekMin)}` : `از شنبه • میانگین هر نفر: ${avgEach(stats.weekMin)}`} icon="study" tone="accent" />
+          {chosen ? <Stat label="روزهای پیاپی" value={`${fa(stats.streak)} روز`} hint={`امروز در ${groupName}: ${fa(studiedToday)} از ${fa(scope.length)} نفر مطالعه کرده‌اند`} icon="fire" tone="warn" />
+            : <Stat label="مطالعه‌کننده‌ی امروز" value={`${fa(studiedToday)} از ${fa(scope.length)} نفر`} hint="دانش‌آموزانی که امروز گزارش دارند" icon="fire" tone="warn" />}
+          <Stat label={chosen ? 'میانگین تست‌ها' : 'میانگین تست‌ها (همه)'} value={stats.avgPercent === null ? '—' : `${fa(stats.avgPercent)}٪`} hint={stats.totalTests ? `${fa(stats.totalTests)} تست` : 'هنوز تستی ثبت نشده'} icon="target" tone="ok" />
+        </div>
+      ) : (
+        <div className="grid g4" style={{ marginBottom: 16 }}>
+          <Stat label="مطالعه‌ی امروز" value={formatDuration(stats.todayMin)} icon="clock" tone="primary" />
+          <Stat label="مطالعه‌ی این هفته" value={formatDuration(stats.weekMin)} hint="از شنبه" icon="study" tone="accent" />
+          <Stat label="روزهای پیاپی" value={`${fa(stats.streak)} روز`} icon="fire" tone="warn" />
+          <Stat label="میانگین تست‌ها" value={stats.avgPercent === null ? '—' : `${fa(stats.avgPercent)}٪`} hint={stats.totalTests ? `${fa(stats.totalTests)} تست` : 'هنوز تستی ثبت نشده'} icon="target" tone="ok" />
+        </div>
+      )}
 
+      {canWrite && students[0] && <div style={{ marginBottom: 16 }}><WeekSummaryCard s={await loadWeekSummary(students[0].id, today)} name={isSelf ? undefined : students[0].name} /></div>}
       {filters}
       <Tabs tabs={[
         ...(canWrite ? [{ id: 'form', label: '✏️ ثبت گزارش', content: (<div className="stack">{!initial && noStudyCard}<Card title={initial ? 'ویرایش گزارش امروز' : 'ثبت گزارش جدید'} className="">

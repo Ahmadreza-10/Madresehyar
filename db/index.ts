@@ -9,12 +9,7 @@ declare global {
   var __libsql: ReturnType<typeof createClient> | undefined;
 }
 
-const client = globalThis.__libsql ?? createClient({
-  url,
-  ...(process.env.TURSO_AUTH_TOKEN
-    ? { authToken: process.env.TURSO_AUTH_TOKEN }
-    : {}),
-});
+const client = globalThis.__libsql ?? createClient({ url });
 if (process.env.NODE_ENV !== 'production') globalThis.__libsql = client;
 
 export const db = drizzle(client, { schema });

@@ -1,0 +1,11 @@
+# HTTPS خودکار با Caddy (https://caddyserver.com) — گواهی را خودش می‌گیرد و تمدید می‌کند.
+# ۱) دامنه‌ی خودتان را جای school.example.ir بنویسید و DNS آن را به IP سرور وصل کنید (پورت‌های ۸۰ و ۴۴۳ باز باشد).
+# ۲) سایت را روی همان سرور اجرا کنید:  npm run build && npm run start   (پورت ۳۰۰۰)
+# ۳) Caddy را با این فایل اجرا کنید:  caddy run --config deploy/Caddyfile
+school.example.ir {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+	}
+}

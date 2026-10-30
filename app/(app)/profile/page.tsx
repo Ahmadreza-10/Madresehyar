@@ -62,7 +62,7 @@ export default async function Profile({ searchParams }: { searchParams: Promise<
           <ActionForm action={changePasswordAction} submit="ذخیره‌ی رمز جدید">
             <div className="field"><label>رمز فعلی</label><input name="current" type="password" dir="ltr" autoComplete="current-password" required /></div>
             <p className="hint-t">{PASSWORD_HINT}</p>
-            <div className="field"><label>رمز جدید</label><input name="next" type="password" dir="ltr" autoComplete="new-password" minLength={10} required /><span className="hint-t">حداقل ۸ نویسه</span></div>
+            <div className="field"><label>رمز جدید</label><input name="next" type="password" dir="ltr" autoComplete="new-password" minLength={8} required /><span className="hint-t">حداقل ۸ نویسه</span></div>
             <div className="field"><label>تکرار رمز جدید</label><input name="again" type="password" dir="ltr" autoComplete="new-password" required /></div>
           </ActionForm>
         </Card>

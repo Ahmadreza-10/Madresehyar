@@ -21,7 +21,7 @@ function navFor(user: CurrentUser): NavItem[] {
     { href: '/admin/users', label: 'کاربران مدرسه', icon: 'shield', group: 'مدیریت مدرسه' }, { href: '/admin/classes', label: 'کلاس‌ها', icon: 'school' },
     { href: '/admin/settings', label: 'تنظیمات مدرسه', icon: 'settings' },
   ];
-  if (role === 'ADMIN') return [home, { href: '/admin/schools', label: 'مدارس و مدیران', icon: 'school', group: 'مدیریت سامانه' }, ...(user.isOwner ? [{ href: '/admin/audit', label: 'گزارش فعالیت‌ها', icon: 'log' } as NavItem] : []), { href: '/messages', label: 'پیام‌ها', icon: 'mail' }, { href: '/admin/requests', label: 'درخواست‌های ثبت‌نام', icon: 'check' }, { href: '/admin/plans', label: 'تعرفه‌ها', icon: 'settings' }, { href: '/admin/support', label: 'پشتیبانی', icon: 'mail' }, { href: '/admin/admins', label: 'مدیران سامانه', icon: 'shield' }];
+  if (role === 'ADMIN') return [home, { href: '/admin/schools', label: 'مدارس و مدیران', icon: 'school', group: 'مدیریت سامانه' }, ...(user.isOwner ? [{ href: '/admin/audit', label: 'گزارش فعالیت‌ها', icon: 'log' } as NavItem, { href: '/admin/backups', label: 'پشتیبان‌گیری', icon: 'settings' } as NavItem] : []), { href: '/messages', label: 'پیام‌ها', icon: 'mail' }, { href: '/admin/requests', label: 'درخواست‌های ثبت‌نام', icon: 'check' }, { href: '/admin/plans', label: 'تعرفه‌ها', icon: 'settings' }, { href: '/admin/support', label: 'پشتیبانی', icon: 'mail' }, { href: '/admin/admins', label: 'مدیران سامانه', icon: 'shield' }];
   // مدیر و معاون بخش تکالیف را ندارند (تکلیف کار معلم و دانش‌آموز است)
   if (role === 'PRINCIPAL' || role === 'VICE') return [home, study, ...staff, ...school.filter((i) => i.href !== '/assignments'), { href: '/teacher-schedule', label: 'برنامه‌ی معلمان', icon: 'calendar' }, { href: '/surveys', label: 'نظرسنجی معلمان', icon: 'note' }, ...manage, help];
   if (role === 'TEACHER') return [home, study, ...staff, ...school, { href: '/teacher-schedule', label: 'برنامه‌ی من (معلم)', icon: 'calendar' }, { href: '/surveys', label: 'نظرسنجی دانش‌آموزان', icon: 'note' }, help];
@@ -29,7 +29,7 @@ function navFor(user: CurrentUser): NavItem[] {
   return [home, study, ...school, ...mates, { href: '/advisor', label: 'مشاور تحصیلی', icon: 'target' }, ...(role === 'STUDENT' ? [{ href: '/surveys', label: 'نظرسنجی معلم‌ها', icon: 'note' } as NavItem] : []), help]; // دانش‌آموز و ولی
 }
 
-const ILLUS: Record<string, IllusName> = { '/dashboard': 'school', '/study': 'study', '/students': 'students', '/grades': 'grades', '/report-card': 'report', '/discipline': 'discipline', '/schedule': 'schedule', '/messages': 'messages', '/attendance': 'attendance', '/assignments': 'assignments', '/announcements': 'announcements', '/admin/users': 'users', '/admin/classes': 'school', '/admin/settings': 'settings', '/admin/audit': 'log', '/admin/schools': 'school', '/advisor': 'advisor', '/teacher-schedule': 'teacher', '/surveys': 'survey', '/classmates': 'students', '/help': 'help', '/admin/support': 'messages', '/admin/requests': 'announcements', '/admin/plans': 'report', '/admin/admins': 'users' };
+const ILLUS: Record<string, IllusName> = { '/dashboard': 'school', '/study': 'study', '/students': 'students', '/grades': 'grades', '/report-card': 'report', '/discipline': 'discipline', '/schedule': 'schedule', '/messages': 'messages', '/attendance': 'attendance', '/assignments': 'assignments', '/announcements': 'announcements', '/admin/users': 'users', '/admin/classes': 'school', '/admin/settings': 'settings', '/admin/audit': 'log', '/admin/backups': 'settings', '/admin/schools': 'school', '/advisor': 'advisor', '/teacher-schedule': 'teacher', '/surveys': 'survey', '/classmates': 'students', '/help': 'help', '/admin/support': 'messages', '/admin/requests': 'announcements', '/admin/plans': 'report', '/admin/admins': 'users' };
 
 export default function Shell({ user, schoolName, unread = 0, pendingRequests = 0, pendingResets = 0, children }: { user: CurrentUser; schoolName: string; unread?: number; pendingRequests?: number; pendingResets?: number; children: React.ReactNode }) {
   const items = navFor(user).map((i) => ({ ...i, illus: ILLUS[i.href], ...(i.href === '/messages' ? { badge: unread } : {}), ...(i.href === '/admin/requests' ? { badge: pendingRequests } : {}), ...(i.href === '/admin/users' ? { badge: pendingResets } : {}) }));
@@ -38,6 +38,7 @@ export default function Shell({ user, schoolName, unread = 0, pendingRequests = 
   const mobileItems = items.filter((i) => !i.href.startsWith('/admin') || i.href === '/admin/users' || i.href === '/admin/schools' || i.href === '/admin/support' || i.href === '/admin/requests' || i.href === '/admin/plans');
   return (
     <div className="shell">
+      <a href="#main" className="skip-link">رفتن به محتوای اصلی</a>
       <aside className="sidebar">
         <div className="brand"><Mascot size={50} className="brand-mascot" /><div><b>مدرسه‌یار</b><span>{schoolName}</span></div></div>
         <SideNav items={items} />
@@ -47,7 +48,7 @@ export default function Shell({ user, schoolName, unread = 0, pendingRequests = 
         </div>
       </aside>
       <div>
-        <div className="mobilebar"><div className="row"><UserAvatar user={user} size={36} /><b>{name}</b></div><div className="row"><a className="btn ghost sm" href="/profile">حساب</a>{logout}</div></div>
+        <div className="mobilebar"><div className="row"><UserAvatar user={user} size={36} /><b>{name}</b></div><div className="row mb-actions"><a className="dh-icon" href="/profile" aria-label="حساب من" title="حساب من"><Icon name="settings" /></a><form action={logoutAction}><button type="submit" className="dh-icon" aria-label="خروج" title="خروج"><Icon name="logout" /></button></form></div></div>
         <AccentMain>{children}</AccentMain>
         <BottomNav items={mobileItems} />
         <MobileTables />

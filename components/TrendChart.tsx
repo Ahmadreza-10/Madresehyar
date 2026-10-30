@@ -9,7 +9,7 @@ const niceStep = (span: number) => { for (const s of [0.5, 1, 2, 2.5, 5, 10, 20]
  *  ۱) کارت‌های بزرگِ «آخرین مقدار + تغییر نسبت به ماه قبل» برای هر خط
  *  ۲) نمودار با محور عمودیِ بزرگ‌نمایی‌شده روی بازه‌ی واقعیِ داده‌ها، نقطه‌های درشت و عدد روی همه‌ی نقطه‌ها
  *  ۳) جدول مقدارها برای ماه‌هایی که داده دارند */
-export default function TrendChart({ labels, series, min, max, unit = '' }: { labels: string[]; series: Series[]; min?: number; max?: number; unit?: string }) {
+function TrendChartInner({ labels, series, min, max, unit = '' }: { labels: string[]; series: Series[]; min?: number; max?: number; unit?: string }) {
   const box = useRef<HTMLDivElement>(null); const gid = useId().replace(/:/g, '');
   const [w, setW] = useState(640); const [hi, setHi] = useState<number | null>(null);
   useEffect(() => { const el = box.current; if (!el) return; const upd = () => setW(Math.max(280, Math.round(el.clientWidth))); upd(); const ro = new ResizeObserver(upd); ro.observe(el); return () => ro.disconnect(); }, []);
@@ -86,4 +86,17 @@ export default function TrendChart({ labels, series, min, max, unit = '' }: { la
       </table></div>
     </div>
   );
+}
+
+/** ماه‌های خالیِ ابتدا و انتهای بازه نمایش داده نمی‌شوند (محور فقط از اولین تا آخرین ماهِ دارای داده)؛ ماه‌های خالیِ میانه می‌مانند تا شکاف دیده شود */
+export function trimEmptyEdges(labels: string[], series: Series[]): { labels: string[]; series: Series[] } {
+  const has = labels.map((_, i) => series.some((s) => s.values[i] !== null && s.values[i] !== undefined));
+  const first = has.indexOf(true); const last = has.lastIndexOf(true);
+  if (first < 0) return { labels, series };
+  return { labels: labels.slice(first, last + 1), series: series.map((s) => ({ ...s, values: s.values.slice(first, last + 1) })) };
+}
+
+export default function TrendChart(props: { labels: string[]; series: Series[]; min?: number; max?: number; unit?: string }) {
+  const t = trimEmptyEdges(props.labels, props.series);
+  return <TrendChartInner {...props} labels={t.labels} series={t.series} />;
 }

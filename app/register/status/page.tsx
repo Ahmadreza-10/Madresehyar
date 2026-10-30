@@ -66,8 +66,8 @@ export default async function StatusPage() {
             <ActionForm action={completeRegistration} submit="ساخت مدرسه و حساب مدیر" resetOnSuccess={false}>
               <div className="field"><label>نام کاربری (انگلیسی)</label><input name="username" dir="ltr" required defaultValue={r.phone} autoCapitalize="none" autoComplete="username" /></div>
               <p className="hint-t">{PASSWORD_HINT}</p>
-              <div className="inline-fields"><div className="field"><label>رمز عبور</label><input name="password" type="password" dir="ltr" minLength={10} required autoComplete="new-password" /></div>
-                <div className="field"><label>تکرار رمز</label><input name="again" type="password" dir="ltr" minLength={10} required autoComplete="new-password" /></div></div>
+              <div className="inline-fields"><div className="field"><label>رمز عبور</label><input name="password" type="password" dir="ltr" minLength={8} required autoComplete="new-password" /></div>
+                <div className="field"><label>تکرار رمز</label><input name="again" type="password" dir="ltr" minLength={8} required autoComplete="new-password" /></div></div>
             </ActionForm>
           </div>)}
 

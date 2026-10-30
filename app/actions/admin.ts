@@ -14,7 +14,7 @@ import { classInSchool, isManager, schoolOf } from '@/lib/permissions';
 import { checkPassword } from '@/lib/password-policy';
 import { fullName } from '@/lib/format';
 import { getSettings, setSetting } from '@/lib/settings';
-import { parseHM } from '@/lib/time';
+import { parseHM, todayTehran } from '@/lib/time';
 
 const MANAGERS = ['PRINCIPAL', 'VICE'] as const;
 const faDigits = (s: string) => s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
@@ -400,6 +400,13 @@ export async function saveSettings(_: ActionState, fd: FormData): Promise<Action
     await setSetting(school, 'studyWindowStart', start); await setSetting(school, 'studyWindowEnd', end);
     await setSetting(school, 'showRankLists', fd.get('showRankLists') ? '1' : '0');
     await setSetting(school, 'remindersEnabled', fd.get('remindersEnabled') ? '1' : '0');
+    // قابلیت‌های اختیاریِ مثبت/منفی خودکار برای گزارش مطالعه (پیش‌فرض: خاموش)
+    const praiseOn = fd.get('autoStudyPraise') ? '1' : '0'; const negOn = fd.get('autoStudyNegative') ? '1' : '0';
+    const prev = await getSettings(school);
+    await setSetting(school, 'autoStudyPraise', praiseOn);
+    await setSetting(school, 'autoStudyNegative', negOn);
+    if (negOn === '1' && prev.autoStudyNegative !== '1') await setSetting(school, 'autoStudyNegativeSince', todayTehran()); // فقط از امروز به بعد؛ گذشته منفی نمی‌گیرد
+    if (negOn === '0') await setSetting(school, 'autoStudyNegativeSince', '');
     await audit(u.id, 'SETTINGS_SAVE', 'settings', undefined, `${start}–${end}`);
     revalidatePath('/', 'layout');
     return success('تنظیمات ذخیره شد.');

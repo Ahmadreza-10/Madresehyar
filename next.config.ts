@@ -23,6 +23,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.*.*', '10.*.*.*', '172.16.*.*', '*.local'],
   // جلوگیری از هشدار «lockfile در پوشه‌ی بالاتر» روی ویندوز
   turbopack: { root: path.resolve(__dirname) },
-  serverExternalPackages: ['@libsql/client', 'libsql', 'bcryptjs'],
+  serverExternalPackages: ['@libsql/client', 'libsql', 'bcryptjs', 'exceljs'],
 };
 export default nextConfig;

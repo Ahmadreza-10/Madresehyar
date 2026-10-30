@@ -1,7 +1,7 @@
 import { deleteStudyReport, saveFeedback } from '@/app/actions/study';
 import { methodLabels } from '@/lib/study';
 import type { LoadedReport } from '@/lib/study-data';
-import { fa, formatDuration } from '@/lib/format';
+import { fa, formatDuration, formatJalali } from '@/lib/format';
 import ActionForm from './ActionForm';
 import { Badge } from './ui';
 
@@ -11,7 +11,7 @@ export default function ReportCard({ r, showStudent, canFeedback, canDelete }: {
       <div className="report-top">
         <div>
           <div className="row" style={{ gap: 8 }}><b>{r.items.length > 1 ? `${fa(r.items.length)} درس` : r.items[0]?.subjectName}</b>{r.items.length > 1 && <span className="muted small">{r.items.map((i) => i.subjectName).join('، ')}</span>}</div>
-          <div className="muted small num">{showStudent && <>{r.studentName} • </>}ثبت در ساعت {fa(r.endTime)}</div>
+          <div className="muted small num">{showStudent && <>{r.studentName} • </>}<b>{formatJalali(r.date, true)}</b> • ثبت در ساعت {fa(r.endTime)}</div>
         </div>
         <div className="row" style={{ gap: 6 }}><Badge tone="primary">{formatDuration(r.durationMin)}</Badge></div>
       </div>

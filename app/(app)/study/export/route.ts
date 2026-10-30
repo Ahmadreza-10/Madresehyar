@@ -1,27 +1,26 @@
+import { and, eq, inArray } from 'drizzle-orm';
+import { db } from '@/db';
+import { classes, users } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { isManager, visibleStudentIds } from '@/lib/permissions';
 import { loadReports } from '@/lib/study-data';
-import { methodLabels } from '@/lib/study';
-import { formatJalaliShort } from '@/lib/format';
+import { buildStudyWorkbook, jalaliSortable } from '@/lib/study-export';
 import { addDays, todayTehran } from '@/lib/time';
 
-const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-
-/** خروجی CSV (قابل باز شدن در اکسل) از گزارش‌های مطالعه؛ فقط معلم/مدیر، فقط در محدوده‌ی دسترسی */
+/** خروجی اکسل (.xlsx) از گزارش‌های مطالعه؛ فقط مدیر/معاون/معلم، فقط در محدوده‌ی دسترسی. هر درس یک ردیف و یک برگه‌ی خلاصه‌ی دانش‌آموزان. */
 export async function GET(req: Request) {
   const u = await getCurrentUser();
   if (!u || !u.schoolId || !isManager(u.role)) return new Response('forbidden', { status: 403 });
-  const url = new URL(req.url); const range = url.searchParams.get('range'); const student = url.searchParams.get('student');
+  const url = new URL(req.url); const range = url.searchParams.get('range'); const student = url.searchParams.get('student'); const classId = url.searchParams.get('class');
   const scope = await visibleStudentIds(u);
-  const ids = student ? (scope.includes(student) ? [student] : []) : scope;
-  const from = range === 'all' ? undefined : addDays(todayTehran(), range === '7' ? -6 : -29);
+  let ids = student ? (scope.includes(student) ? [student] : []) : scope;
+  if (classId && !student && ids.length) ids = (await db.select({ id: users.id }).from(users).where(and(eq(users.classId, classId), inArray(users.id, ids)))).map((r) => r.id); // فقط دانش‌آموزان همان کلاس
+  const today = todayTehran();
+  const from = range === 'all' ? undefined : addDays(today, range === '7' ? -6 : -29);
   const reports = await loadReports({ studentIds: ids, from, limit: 5000 });
-  const head = ['دانش‌آموز', 'تاریخ', 'شروع', 'پایان', 'مدت کل (دقیقه)', 'درس', 'دقیقه‌ی مطالعه', 'دقیقه‌ی تست', 'مبحث', 'شیوه‌ها', 'صفحه', 'تسلط', 'منبع تست', 'کل تست', 'صحیح', 'غلط', 'نزده', 'درصد'];
-  const lines = [head.map(esc).join(',')];
-  for (const r of reports) for (const i of r.items) {
-    const base = [r.studentName, formatJalaliShort(r.date), r.startTime, r.endTime, r.durationMin, i.subjectName, i.studyMin, i.testMin, i.topic, i.methodList.map((m) => methodLabels[m as keyof typeof methodLabels] ?? m).join(' + '), i.pages, i.mastery];
-    if (!i.tests.length) lines.push([...base, '', '', '', '', '', ''].map(esc).join(','));
-    for (const t of i.tests) lines.push([...base, t.source, t.totalCount, t.correctCount, t.wrongCount, t.blankCount, t.percent].map(esc).join(','));
-  }
-  return new Response('\uFEFF' + lines.join('\r\n'), { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="study-reports.csv"', 'cache-control': 'no-store' } });
+  const rows = ids.length ? await db.select({ id: users.id, cls: classes.name }).from(users).leftJoin(classes, eq(classes.id, users.classId)).where(inArray(users.id, ids)) : [];
+  const clsMap = new Map(rows.map((r) => [r.id, r.cls ?? '']));
+  const buf = await buildStudyWorkbook(reports, (id) => clsMap.get(id) ?? '');
+  const name = `study-reports-${jalaliSortable(today).replace(/\//g, '-')}.xlsx`;
+  return new Response(new Uint8Array(buf), { headers: { 'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'content-disposition': `attachment; filename="${name}"`, 'cache-control': 'no-store' } });
 }
