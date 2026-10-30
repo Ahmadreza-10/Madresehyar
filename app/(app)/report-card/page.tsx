@@ -55,11 +55,17 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
   const classNameOf = new Map(ctx.gradeClasses.map((c) => [c.id, c.name]));
   const clsOf = new Map(ctx.gradeStudents.map((s) => [s.id, s.classId]));
   const href = (o: { student?: string; p?: string }) => { const q = new URLSearchParams(); const s = o.student ?? st.id; q.set('student', s); const p = o.p ?? period.key; if (p !== 'year') q.set('p', p); return `/report-card?${q}`; };
-  const rankTable = (rows: Ranked[], withClass: boolean) => (
-    <div className="table-wrap rc-tw"><table><thead><tr><th>رتبه</th><th>نام</th>{withClass && <th>کلاس</th>}<th>{onlyMine ? 'میانگین درس' : 'معدل کل'}</th></tr></thead><tbody>
-      {rows.map((x) => (<tr key={x.studentId} className={x.studentId === st.id ? 'me-row' : ''}><td className="num"><b>{fa(x.rank)}</b></td><td>{nameOf.get(x.studentId)}{x.studentId === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(x.studentId) ?? '') ?? '—'}</td>}<td className="num">{fa(x.avg)}</td></tr>))}
-    </tbody></table></div>
-  );
+  // everyone = همه‌ی دانش‌آموزان آن گروه (کلاس یا پایه)؛ کسانی که در این بازه نمره ندارند هم نشان داده می‌شوند (بدون رتبه، پایین جدول)
+  const rankTable = (rows: Ranked[], withClass: boolean, everyone: string[]) => {
+    const ranked = new Set(rows.map((x) => x.studentId));
+    const without = everyone.filter((id) => !ranked.has(id) && nameOf.has(id)).sort((a, b) => (nameOf.get(a) ?? '').localeCompare(nameOf.get(b) ?? '', 'fa'));
+    return (
+      <><div className="table-wrap rc-tw"><table><thead><tr><th>رتبه</th><th>نام</th>{withClass && <th>کلاس</th>}<th>{onlyMine ? 'میانگین درس' : 'معدل کل'}</th></tr></thead><tbody>
+        {rows.map((x) => (<tr key={x.studentId} className={x.studentId === st.id ? 'me-row' : ''}><td className="num"><b>{fa(x.rank)}</b></td><td>{nameOf.get(x.studentId)}{x.studentId === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(x.studentId) ?? '') ?? '—'}</td>}<td className="num">{fa(x.avg)}</td></tr>))}
+        {without.map((id) => (<tr key={id} className="muted"><td className="num">—</td><td>{nameOf.get(id)}{id === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(id) ?? '') ?? '—'}</td>}<td className="small">بدون نمره</td></tr>))}
+      </tbody></table></div>{without.length > 0 && <div className="muted small" style={{ marginTop: 8 }}>{fa(without.length)} نفر در این بازه هنوز نمره‌ای ندارند؛ تا نمره ثبت نشود در رتبه‌بندی و میانگین حساب نمی‌شوند.</div>}</>
+    );
+  };
 
   return (
     <div className="rc-page">
@@ -106,10 +112,10 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
       {showLists ? (
         <div className="stack">
           <Collapse title={onlyMine ? `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} در درس شما — ${period.label}` : `رتبه‌بندی کلاس ${ctx.cls?.name ?? ''} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات کلاس' : 'میانگین معدل کل کلاس'}: <b>{val(res.classAvg)}</b></span>}>
-            {res.cls.length ? rankTable(res.cls, false) : <Empty text="در این بازه نمره‌ای برای کلاس ثبت نشده است." icon="grades" />}
+            {ctx.classIds.length ? rankTable(res.cls, false, ctx.classIds) : <Empty text="در این بازه نمره‌ای برای کلاس ثبت نشده است." icon="grades" />}
           </Collapse>
           <Collapse title={onlyMine ? `رتبه‌بندی ${gradeTitle(ctx.cls?.gradeLevel)} در درس شما — ${period.label}` : `رتبه‌بندی ${gradeTitle(ctx.cls?.gradeLevel)} (${period.label})`} badge={<span className="badge primary">{onlyMine ? 'میانگین نمرات پایه' : 'میانگین معدل کل پایه'}: <b>{val(res.gradeAvg)}</b></span>}>
-            {res.grd.length ? rankTable(res.grd, true) : <Empty text="در این بازه نمره‌ای برای پایه ثبت نشده است." icon="grades" />}
+            {ctx.gradeIds.length ? rankTable(res.grd, true, ctx.gradeIds) : <Empty text="در این بازه نمره‌ای برای پایه ثبت نشده است." icon="grades" />}
           </Collapse>
         </div>
       ) : <div className="alert warn">نمایش فهرست کامل رتبه‌ها برای دانش‌آموزان و اولیا توسط مدرسه غیرفعال شده است؛ فقط رتبه و معدل خودتان نمایش داده می‌شود.</div>}

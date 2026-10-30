@@ -1331,3 +1331,12 @@ th { font-size: var(--fs-sm); color: var(--muted); }
 
 /* نتایج جستجو: در همه‌ی اندازه‌ها دیده شود (کلاس stu-list فقط برای گوشی است) */
 .srch-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+
+/* چشمِ نمایش رمز: متن رمز هیچ‌وقت زیر دکمه نرود (فضای ۵۶px در سمت دکمه) */
+.pw-wrap input, .login-card .pw-wrap input { padding-left: 14px; padding-right: 56px; }
+.pw-wrap .pw-eye { right: 6px; width: 44px; }
+
+/* کارت گزارش مطالعه: نام دانش‌آموز درشت و خوانا؛ تاریخ و ساعت زیرش با اندازه‌ی راحت */
+.report-student { font-size: 1.25rem; font-weight: 800; line-height: 1.5; color: var(--text); margin-bottom: 2px; }
+.report-when { font-size: .92rem; }
+@media screen and (max-width: 640px) { .report-student { font-size: 1.15rem; } }
