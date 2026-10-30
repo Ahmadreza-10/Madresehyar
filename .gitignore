@@ -8,4 +8,6 @@ data/*.db-*
 *.tsbuildinfo
 .env.local
 .env.*.local
+c1-students.csv
+accounts.csv
 
