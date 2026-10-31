@@ -55,15 +55,32 @@ export default async function ReportCardPage({ searchParams }: { searchParams: P
   const classNameOf = new Map(ctx.gradeClasses.map((c) => [c.id, c.name]));
   const clsOf = new Map(ctx.gradeStudents.map((s) => [s.id, s.classId]));
   const href = (o: { student?: string; p?: string }) => { const q = new URLSearchParams(); const s = o.student ?? st.id; q.set('student', s); const p = o.p ?? period.key; if (p !== 'year') q.set('p', p); return `/report-card?${q}`; };
-  // everyone = همه‌ی دانش‌آموزان آن گروه (کلاس یا پایه)؛ کسانی که در این بازه نمره ندارند هم نشان داده می‌شوند (بدون رتبه، پایین جدول)
+  // همان ظاهر «رتبه‌ی نفرات» در بخش مثبت‌ها و منفی‌ها: مدال طلا/نقره/برنز برای سه نفر اول، ردیفِ برجسته برای خود دانش‌آموز
+  const medal = (r: number) => (r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : '');
+  // everyone = همه‌ی دانش‌آموزان آن گروه (کلاس یا پایه)؛ کسانی که در این بازه نمره ندارند هم نشان داده می‌شوند (بدون رتبه، پایین فهرست)
   const rankTable = (rows: Ranked[], withClass: boolean, everyone: string[]) => {
     const ranked = new Set(rows.map((x) => x.studentId));
     const without = everyone.filter((id) => !ranked.has(id) && nameOf.has(id)).sort((a, b) => (nameOf.get(a) ?? '').localeCompare(nameOf.get(b) ?? '', 'fa'));
+    const who = (id: string) => (id === st.id ? <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></> : null);
+    const cls = (id: string) => (withClass ? <small>{classNameOf.get(clsOf.get(id) ?? '') ?? ''}</small> : null);
     return (
-      <><div className="table-wrap rc-tw"><table><thead><tr><th>رتبه</th><th>نام</th>{withClass && <th>کلاس</th>}<th>{onlyMine ? 'میانگین درس' : 'معدل کل'}</th></tr></thead><tbody>
-        {rows.map((x) => (<tr key={x.studentId} className={x.studentId === st.id ? 'me-row' : ''}><td className="num"><b>{fa(x.rank)}</b></td><td>{nameOf.get(x.studentId)}{x.studentId === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(x.studentId) ?? '') ?? '—'}</td>}<td className="num">{fa(x.avg)}</td></tr>))}
-        {without.map((id) => (<tr key={id} className="muted"><td className="num">—</td><td>{nameOf.get(id)}{id === st.id && <> <Badge tone="primary">{st.id === u.id ? 'شما' : 'این دانش‌آموز'}</Badge></>}</td>{withClass && <td>{classNameOf.get(clsOf.get(id) ?? '') ?? '—'}</td>}<td className="small">بدون نمره</td></tr>))}
-      </tbody></table></div>{without.length > 0 && <div className="muted small" style={{ marginTop: 8 }}>{fa(without.length)} نفر در این بازه هنوز نمره‌ای ندارند؛ تا نمره ثبت نشود در رتبه‌بندی و میانگین حساب نمی‌شوند.</div>}</>
+      <>
+        <ol className="rank-list">
+          {rows.map((x) => (
+            <li key={x.studentId} className={x.studentId === st.id ? 'me' : ''} data-rank={x.rank <= 3 ? x.rank : undefined}>
+              <span className="rk">{medal(x.rank)} {fa(x.rank)}</span>
+              <span className="nm">{nameOf.get(x.studentId)}{who(x.studentId)}{cls(x.studentId)}</span>
+              <b className="sc num" title={onlyMine ? 'میانگین درس' : 'معدل کل'}>{fa(x.avg)}</b>
+            </li>))}
+          {without.map((id) => (
+            <li key={id} className={`none${id === st.id ? ' me' : ''}`}>
+              <span className="rk">—</span>
+              <span className="nm">{nameOf.get(id)}{who(id)}{cls(id)}</span>
+              <b className="sc" title="در این بازه نمره‌ای ثبت نشده">بدون نمره</b>
+            </li>))}
+        </ol>
+        {without.length > 0 && <div className="muted small" style={{ marginTop: 8 }}>{fa(without.length)} نفر در این بازه هنوز نمره‌ای ندارند؛ تا نمره ثبت نشود در رتبه‌بندی و میانگین حساب نمی‌شوند.</div>}
+      </>
     );
   };
 

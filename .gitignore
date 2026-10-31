@@ -9,3 +9,16 @@ data/*.db-*
 .env.local
 .env.*.local
 
+*.xlsx
+*.xlsm
+*.xls
+*.ods
+*.csv
+accounts*.csv
+c1-students.csv
+data/
+private-data/
+clean-start.mjs
+db/clean-start.mjs
+*.tgz
+*.zip

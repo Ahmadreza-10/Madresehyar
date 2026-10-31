@@ -1340,3 +1340,7 @@ th { font-size: var(--fs-sm); color: var(--muted); }
 .report-student { font-size: 1.25rem; font-weight: 800; line-height: 1.5; color: var(--text); margin-bottom: 2px; }
 .report-when { font-size: .92rem; }
 @media screen and (max-width: 640px) { .report-student { font-size: 1.15rem; } }
+
+/* فهرست رتبه در کارنامه: دانش‌آموزِ بدون نمره کم‌رنگ‌تر */
+.rank-list li.none { opacity: .72; } .rank-list li.none .sc { font-size: .76rem; font-weight: 500; color: var(--muted); }
+.rank-list .nm .badge { margin-inline-start: 6px; }
